@@ -1,0 +1,27 @@
+{
+  "name": "youknowwho",
+  "version": "0.0.0",
+  "description": "Rule engine for most of generic decision makings ... Gui will follow soon",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/paytm/youknowwho.git"
+  },
+  "keywords": [
+    "business",
+    "rule",
+    "engine"
+  ],
+  "author": "Shrey Agarwal",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/paytm/youknowwho/issues"
+  },
+  "homepage": "https://github.com/paytm/youknowwho",
+  "dependencies": {
+    "lodash": "~3.10.1"
+  }
+}

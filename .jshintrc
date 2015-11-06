@@ -1,0 +1,7 @@
+{
+  "node" : true,
+  "strict": true,
+  "mocha" : true,
+  "multistr": true,
+  "globals": { "require": false, "module": true}
+}
