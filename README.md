@@ -104,10 +104,54 @@ opts are
 **How to use these functions?** ( ToDo )
 Rule Engine exposes an attribute : *customFunc* , which is essentially an object . The key is a string which is functio name and Value if function prototype. This keeps the seasoning dynamic. There is no need to declare whether the
 
+# Logs and Debugging
+Log events are emitted on 3 levels :: log.verbose , log.info and log.error . These are event names. Rule Engine does not make use of any logging library to keep things independent.
+
+
+# Rules Source/Save
+Rules are to be submitted in Following Form : Array of Rules order by priority ( 1 being highest ). Ideally only Active Rules should be submitted.
+
+Each rule is a dictionary : Object having following Keys :
+
+| r_id | r_name | r_exref | r_tags | r_condop | r_priority | r_status | r_c_id | r_c_condition | r_c_key | r_c_op | r_c_value | r_a_id | r_a_action | r_a_key | r_a_value |
+
+This means a lot of repeative information, but we find it easy to maintain a tabular structure.
+Maybe we will change it later to a more JSONified format
+
+
+# GUI ?
+We at paytm save rules in Mysql and use Django Admin to create a rule engine around it. It is very simplistic. Repos for this is open sourced as well. 
+
+
+# Usage
+Load the Rules first( and again and again ...) and simply apply them .
+```
+/*  Load rules 
+        Pass array of Objects in above mentioned format
+*/
+loadRules(arrayOfRules);
+
+```
+
+```
+/*
+    msg : the object which needs to be changed
+    ruletag : single tag. TODO : 
+
+    OPTS : {
+        copyObject : false , // default is false . This creates a copy of object
+    }
+*/
+
+newMsg = self.rules.applyRules(msg, ruletag, opts );
+
+
+```
 
 
 # Todo / improvements / known Bugs
 
 - Support for Custom Blocking/non-blocking sync/async functions is still debatable and is not added as of now
 - How to define a common Rules language ? Currently Rules are picked from DB. Is that standard way , or should we define an API for this ?
+- Apply rule should accept array of tags
 - Give a GUI to manage Rules/ get status/ get active Rules, etc...

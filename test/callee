@@ -1,0 +1,2364 @@
+/* 
+    Rule Engine for IN
+    This will be used to redirect traffic to individual gateways    
+*/
+
+
+/*jshint multistr: true ,node: true*/
+"use strict";
+
+var
+    /* NODE internal */
+    FS                  = require('graceful-fs'),
+    UTIL                = require('util'),
+    PATH                = require('path'),
+    EVENTEMITTER        = require('events').EventEmitter,
+
+    /* NPM Third Party */
+    _                   = require('lodash'),
+    Q                   = require('q'),
+    MOMENT              = require('moment'),
+    PROGRAM             = require('commander'),
+    VALIDATOR           = require('validator'),
+
+    /* NPM Paytm */
+    RQ                  = require('rqueue'),
+
+    /* Project Files */
+    RULES               = require('./rules.js'),
+    MESSAGE             = require('../message.js'),
+    DEFERREDREAD        = require('./deferRead.js'),
+    CONFIG                = require('recharge-config'),
+
+    /* Global Variable */
+    L                   = null,
+    RULE_TAG            = {
+        errormapping            : "errormapping",
+        rechargeredirection     : "rechargeredirection",
+        validationredirection   : "validationredirection",
+        reinitiation            : "reinitiation",
+        redisredirection        : "redisredirection"
+    };
+
+
+UTIL.inherits(rengine, EVENTEMITTER);
+function rengine(config, opts) {
+    var self = this;
+    EVENTEMITTER.call(self);
+
+    self.opts           = opts;
+
+    // Logger
+    self.L              = (opts.L) ? opts.L : require('lgr');
+    self._L             = self.L;
+    L                   = self.L;
+
+    // requestor
+    self._requestor     = opts.requestor;
+
+    // redis
+    self.redis          = opts.redis; 
+
+    // Config
+    self.config             = config;
+
+    // CallBack Object for Sync Calls
+    self.syncCallbackMaps       = {}; 
+
+    // Product Info map
+    self.maps                   = {};
+    self.maps.productInfo       = {};
+
+    self._configureExposeFunctions();
+
+    self._loadEsTemplates();
+
+}
+
+/* Actual Juicy Stuff of listening and acting on it */
+rengine.prototype.startListening = function(cb) {
+    var self = this;
+
+    // Load Rule Engine config
+    self.rules                  = new RULES({}, { L : L});
+    self.rules.sqlwrapEngine    = self.sqlwrapEngine;
+
+    // Load deferred Txn module if it has to be enabled by options
+    if(_.get(self, 'opts.processDeferredRecurring', false) === true) {
+        self.deferredTxnMod = new DEFERREDREAD({
+            L               : L,
+            sqlwrapEngine   : self.sqlwrapEngine,
+            ruleEngine      : self,
+        });
+    } else
+        L.info("startListening", "Not configuring deferredTxn module");
+
+
+    Q(undefined)
+
+        .then(function(){
+            L.info("loadRuleEngine", "Loading Product Info");
+            return self._loadProductInfo();
+        })
+
+        // Loading Stored Procedures
+        .then(function(){
+            L.info("loadRuleEngine", "Stored Procedures");
+            return self._configureStoredProcs();
+        })
+
+        // Loading Error Codes
+        .then(function(){
+            L.info("loadRuleEngine", "Error Codes Loaded");
+            return self.rules.loadErrorCodes();
+        })
+
+        // Loading rules
+        .then(function(){
+            L.info("loadRuleEngine", "Loading Rules");
+            return self.rules.loadRules();
+        })
+
+        // Configure publisher
+        .then(function(){
+            L.info("loadRuleEngine", "Configuring Publisher");
+            return self._configurePublisher();
+        })
+
+        // start publisher
+        .then(function(){
+            L.info("loadRuleEngine", "Starting Publisher");
+            return self._startPublisher();
+        })
+
+        // initialise Subscriber
+        .then(function() {
+            if(_.get(self, 'opts.startPersonalSubscriber', true) === true) {
+                L.info("loadRuleEngine", "Configuring Subscriber");
+                return self._configureSubscriber();
+            } else {
+                L.info("loadRuleEngine", "NOT Configuring Subscriber");
+                return Q(undefined);
+            }
+        })
+
+        // start subscriber
+        .then(function() {
+            if(_.get(self, 'opts.startPersonalSubscriber', true) === true) {
+                L.info("loadRuleEngine", "Starting Subscriber");
+                return self._startSubscriber();
+            } else {
+                L.info("loadRuleEngine", "NOT Starting Subscriber");
+                return Q(undefined);
+            }
+        })
+
+        // initialise Deferred Subscriber
+        .then(function() {
+            if(_.get(self, 'opts.startDeferredSubscriber', true) === true) {
+                L.info("loadRuleEngine", "Configuring Deferred Subscriber");
+                return self._configureDeferredSubscriber();
+            } else {
+                L.info("loadRuleEngine", "NOT Configuring Deferred Subscriber");
+                return Q(undefined);
+            }
+        })
+
+        // start deferred subscriber
+        .then(function() {
+            if(_.get(self, 'opts.startDeferredSubscriber', true) === true) {
+                L.info("loadRuleEngine", "Starting Deferred Subscriber");
+                return self._startDeferredSubscriber();
+            } else {
+                L.info("loadRuleEngine", "NOT Starting Deferred Subscriber");
+                return Q(undefined);
+            }
+        })
+
+        // Set recurring stuff ... 
+        .then(function() {
+            L.info("loadRuleEngine", "Setting recurring tasks !!");
+            return self._setRecurringStuff();
+        })
+
+        .then(function() {
+            L.info("loadRuleEngine", "initialization over");
+            return cb();
+        });
+
+};
+
+
+/* Configure Stored Procedures */
+rengine.prototype._configureStoredProcs = function() {
+
+
+    var
+        self        = this,
+        promiseArray = [],
+        storedProcs = {
+            "insert_gw_txn_v2" : 
+                      'CREATE PROCEDURE `insert_gw_txn_v2`(IN p_app_txn_id INT, IN p_order_id INT, IN p_gw_name VARCHAR(255), IN p_ref_id VARCHAR(255), IN p_attempt INT, IN p_msg TEXT, IN p_in_responsecode VARCHAR(1024),IN p_in_responsemessage VARCHAR(1024))\
+                           BEGIN\
+                           START TRANSACTION;\
+                               INSERT INTO `gateway_transactions` (`app_txn_id`, `order_id`, `gw_name`, `ref_id`, `attempt`, `in_responsecode`, `in_responsemessage`) values (p_app_txn_id, p_order_id, p_gw_name, p_ref_id, p_attempt, p_in_responsecode, p_in_responsemessage);\
+                               SET @last_id = LAST_INSERT_ID();\
+                               UPDATE `gateway_transactions` set `ref_id`=CAST(@last_id AS CHAR) where `id`=@last_id;\
+                               INSERT INTO `gw_txn_msg` (`ref_id`, `msg`) values (@last_id, p_msg);\
+                               SELECT @last_id as last_id;\
+                           COMMIT;\
+                           END\
+                           ; ',
+
+            "update_gw_txn_v2" : 'CREATE PROCEDURE `update_gw_txn_v2`(IN p_id INT(12) UNSIGNED, IN p_gw_name VARCHAR(255), IN p_msg TEXT, IN p_in_responsecode VARCHAR(1024),IN p_in_responsemessage VARCHAR(1024), IN p_gw_errormessage TEXT, IN p_gw_errorcode VARCHAR(4096), IN p_gw_refid VARCHAR(255), IN p_gw_connectionerror VARCHAR(1024), IN p_gw_connectionerrorcode VARCHAR(1024), IN p_gw_connectionerrormessage VARCHAR(1024))\
+                             BEGIN\
+                             START TRANSACTION;\
+                                UPDATE `gateway_transactions` set `gw_errormessage`=p_gw_errormessage, `gw_errorcode`=p_gw_errorcode, `gw_refid`=p_gw_refid, `gw_connectionerror`=p_gw_connectionerror, `gw_connectionerrorcode`=p_gw_connectionerrorcode, `gw_connectionerrormessage`=p_gw_connectionerrormessage, `ts_receivedtime`=now(),\
+                                `gw_name`= CASE WHEN `gw_name` is null or `gw_name`="" THEN p_gw_name ELSE `gw_name` END,\
+                                `in_responsemessage`= CASE WHEN `in_responsecode` not in ("00", "08", "11") or `in_responsecode` is null THEN p_in_responsemessage ELSE `in_responsemessage` END,\
+                               `in_responsecode`= CASE WHEN `in_responsecode` not in ("00", "08", "11") or `in_responsecode` is null THEN p_in_responsecode  ELSE `in_responsecode` END\
+                                           where `id`=p_id;\
+                                UPDATE `gw_txn_msg` set `msg`=p_msg where `ref_id`=p_id;\
+                             COMMIT;\
+                             END\
+                             ; '
+
+        },
+
+
+        queryParams = [];
+
+        Object.keys(storedProcs).forEach(function (key){
+          
+            var
+               deferred    = Q.defer(),
+
+               query       = storedProcs[key];
+
+             
+
+            self.sqlwrapEngine.exec(function(err, result){
+                if(err)     {
+                    /* Raise error only if code is not ER_SP_ALREADY_EXISTS */
+                    if(_.get(err, 'code', '') === 'ER_SP_ALREADY_EXISTS')
+                        L.info("_configureStoredProcs", key + " SP exists, not creating");
+                    else
+                        L.error("_configureStoredProcs", "Error in creating " + key + " err : ", err);
+
+                    deferred.resolve(err);
+                }
+                else {
+
+                    /* Sample Result
+                        [ [ { last_id: 22 } ],
+                          { fieldCount: 0,
+                            affectedRows: 0,
+                            insertId: 0,
+                            serverStatus: 2,
+                            warningCount: 0,
+                            message: '',
+                            protocol41: true,
+                            changedRows: 0 } ]
+                    */
+
+                    L.log("rengine.prototype._configureStoredProcs : Result for " + key + " : " , result);
+
+                    deferred.resolve();
+                }
+            },'MASTER',query, queryParams);
+
+            
+
+            promiseArray.push(deferred.promise);
+
+
+        });
+
+
+        return Q.all(promiseArray);
+
+};
+
+/* Expose functions to inside */
+rengine.prototype._configureExposeFunctions = function() {
+    var self = this;
+
+        // Expose functions
+    self._validator         = VALIDATOR;
+};
+
+/* Load Es templates */
+rengine.prototype._loadEsTemplates = function() {
+    var self = this;
+
+    self._esTemplates = {
+        validation : JSON.parse(FS.readFileSync(PATH.join(__dirname, '../../templates/es/validation.json'))),
+    };
+};
+
+
+/*
+    Set Recurring Interval Stuff
+    Kinda HAcky for now
+*/
+rengine.prototype._setRecurringStuff = function() {
+    var
+        self            = this,
+        unitTime        = 1 * 1000, // X milisec
+        
+        reUnits         = 5 * 60, // X seconds
+        deferredUnits   = 5, // X seconds
+
+        rePassedUnit    = 0,
+        defPassedUnit   = 0;
+
+    var runAll = function() {
+
+        Q(undefined)
+            .then(function(){
+
+                rePassedUnit+= 1;
+
+                if(rePassedUnit >= reUnits) {
+                    rePassedUnit = 0;
+                    return self._loadRuleEngine();
+                } else {
+                    return Q(undefined);
+                }
+            })
+            .then(function(){
+                if(_.get(self, 'opts.processDeferredRecurring', false) === false) {
+                    return Q(undefined);
+                }
+
+                defPassedUnit+= 1;
+
+                if(defPassedUnit >= deferredUnits) {
+                    defPassedUnit = 0;
+                    return self.deferredTxnMod.doWork();
+                } else  return Q(undefined);
+
+            })
+
+            .then(function(){
+                // L.verbose("_setRecurringStuff", "RE reload Triggers at ", rePassedUnit, reUnits);
+                // L.verbose("_setRecurringStuff", "Deferred Triggers at ", defPassedUnit, deferredUnits);
+
+                setTimeout(runAll, unitTime);
+            });
+    };
+
+    setTimeout(runAll, unitTime);
+
+    // This line is fine.. Jshint has a problem here
+    return Q(undefined);
+};
+
+rengine.prototype._loadRuleEngine = function() {
+    var
+        self        = this,
+        deferred    = Q.defer();
+
+    self._loadProductInfo()
+        .then(function(){
+            L.info("_loadRuleEngine", "Product Info Loaded");
+            return self.rules.loadRules();
+        })
+
+        .then(function(){
+            L.info("_loadRuleEngine", "Error Codes Loaded");
+            return self.rules.loadErrorCodes();
+        })
+
+        .then(function(){
+            L.info("_loadRuleEngine", "Rules Loaded");
+            deferred.resolve();
+        });
+
+    return deferred.promise; 
+};
+
+/* configure Publisher to publish messages to Gateway Service */
+rengine.prototype._configurePublisher = function() {
+    var
+        self        = this,
+        ex          =  {
+        NAME                : 'ex_recharge_to_gw',
+        TYPE                : 'topic',
+        OPTIONS             : {
+            durable         : true,
+            internal        : false,
+            autoDelete      : false,
+        }
+    };
+
+    // set publisher
+    self.toGatewayPublisher = new RQ().getSimplePublisher(ex);
+
+    // This line is fine.. Jshint has a problem here
+    return Q(undefined);
+};
+
+
+/* Start publisher */
+rengine.prototype._startPublisher = function() {
+    var
+        self        = this,
+        deferred    = Q.defer();
+
+    self.toGatewayPublisher.start({}, function(){  deferred.resolve(); });
+    return deferred.promise;        
+};
+
+
+/* Publish message to Gateway service */
+rengine.prototype._publishMsg = function(data, opts, key, exchange) {
+    var self = this;
+    self.toGatewayPublisher.publish(data, opts, key, exchange);
+};
+
+/* configure Subscriber to receive messages/responses from Gateway Service */
+rengine.prototype._configureSubscriber = function() {
+    var self = this;
+
+    var ex =  {
+        NAME                : MESSAGE.getGwToRechargeExchangeName(),
+        TYPE                : 'topic',
+        OPTIONS             : {
+            durable         : true,
+            internal        : false,
+            autoDelete      : false,
+        }
+    };
+
+
+    var queueObj = {
+        NAME                : MESSAGE.getServerIdQueueName(),
+        OPTIONS             : {
+            exclusive       : false,
+            durable         : true,
+            autoDelete      : false,
+        },
+
+        CONSUMEOPTS         : {
+            noAck           : false
+        },
+        PREFETCH            : 100,
+
+        BINDINGKEY          : MESSAGE.getSrvrID() + '.*',
+    };
+
+    // set Subscriber
+    self.fromGatewaySubscriber = new RQ().getSimpleSubscriber(ex, queueObj);
+
+    // Set subscriber function
+    self.fromGatewaySubscriber.on('message', self._handleIncomingGatewayMessages.bind(self));
+};
+
+/* Start Subscriber */
+rengine.prototype._startSubscriber = function() {
+    var
+        self        = this,
+        deferred    = Q.defer();
+
+    self.fromGatewaySubscriber.start({}, function(){   deferred.resolve(); });
+    return deferred.promise;
+};
+
+
+/* configure Subscriber to receive messages/responses from All deferred Service */
+rengine.prototype._configureDeferredSubscriber = function() {
+    var self = this;
+
+    var ex =  {
+        NAME                : MESSAGE.getDeferredToRechargeExchangeName(),
+        TYPE                : 'topic',
+        OPTIONS             : {
+            durable         : true,
+            internal        : false,
+            autoDelete      : false,
+        }
+    };
+
+    var queueObj = {
+        NAME                : MESSAGE.getServerColorQueueName(),
+        OPTIONS             : {
+            exclusive       : false,
+            durable         : true,
+            autoDelete      : false,
+        },
+
+        CONSUMEOPTS         : {
+            noAck           : false
+        },
+        PREFETCH            : 100,
+
+        BINDINGKEY          : MESSAGE.getSubscriberKeyForDeferred(),
+    };
+
+    // set Subscriber
+    self.fromDeferredSubscriber = new RQ().getSimpleSubscriber(ex, queueObj);
+
+    // Set subscriber function
+    self.fromDeferredSubscriber.on('message', self._handleIncomingDeferredMessages.bind(self));
+};
+
+
+/* Start Deferred Subscriber */
+rengine.prototype._startDeferredSubscriber = function() {
+    var
+        self        = this,
+        deferred    = Q.defer();
+
+    self.fromDeferredSubscriber.start({}, function(){   deferred.resolve(); });
+    return deferred.promise;
+};
+
+
+/* function to receive gateway messages/responses into */
+rengine.prototype._handleIncomingGatewayMessages = function(rmqMsg) {
+
+    var
+        self = this;
+
+    // Common message handler
+    self.__incomingMessageRuleEngine(rmqMsg,
+        'gateway',
+        function(){ self.fromGatewaySubscriber.ack(rmqMsg); },
+        function(){ self.fromGatewaySubscriber.nack(rmqMsg); }
+    );
+};
+
+
+/* function to receive gateway messages/responses into */
+rengine.prototype._handleIncomingDeferredMessages = function(rmqMsg) {
+    L.verbose("rengine.prototype._handleIncomingDeferredMessages [x] %s:'%s'",
+        rmqMsg.fields.routingKey,
+        VALIDATOR.toString(rmqMsg.content)
+    );
+
+    var
+        self        = this,
+        routingKey  = rmqMsg.fields.routingKey,
+        message     = JSON.parse(VALIDATOR.toString(rmqMsg.content)),
+
+        reqType     = null,
+        msgId       = null;
+
+    reqType = message.reqType;
+    
+    /* Ack the message */
+    self.fromDeferredSubscriber.ack(rmqMsg);
+
+    if(reqType == MESSAGE.REQUEST_TYPE.RECHARGECALLBACK) {
+
+        /*
+            Pass the message through Rule Engine to see what it makes of it
+            Error Coding 
+        */
+        message = self.rules.applyRules(message, RULE_TAG.errormapping);
+
+        /* This is to mark a default response as PENDING in case no error code is settled */
+        if (_.get(message, "inStatusMap.responseCode") == 'IR') {
+            _.set(message, "inStatusMap.responseCode", "07");
+            _.set(message, "inStatusMap.transactionStatus", "PENDING");
+        }
+
+        Q(undefined)
+
+        .then(function() {
+            /* Update the message in DB for callback*/
+            return self._updateCallbackRechargeTxnDb(message);
+        })
+
+        .then(function () {
+            /* Fetch app_txn_id from DB for callback */
+            return self._fetchAppTxnIdForCallback(message);
+        })
+        .then(function() {
+            if (_.get(message, 'orderInfo.apptxn_id', null) === null) {
+                /* Dont send a callback if app txn Id is not found */
+                L.info("rengine.prototype._handleIncomingDeferredMessages", " No App Txn Id Found ", message);
+                return Q(undefined);
+            } else {
+              /* Introduce a callback as IN used to do */
+              return self._initiateSelfInCallback(message);
+            }
+        })
+        .catch(function (error) {
+            L.info('rengine.prototype._handleIncomingDeferredMessages ', ' Catch in promise ', error );
+        });
+
+    }
+    else if(reqType == MESSAGE.REQUEST_TYPE.WALLETBALANCE) {
+
+        L.verbose("_handleIncomingDeferredMessages", "Receiving Wallet balance response ", JSON.stringify(message));
+        
+        /* Simply update DB here if response is present */
+
+        if(_.get(message, 'walletBalanceResp') !== undefined) {
+            Q(undefined)
+            .then(function() {
+                /* Update the message in DB for callback*/
+                return self._insertWalletBalance(message);
+            });
+        }
+        
+    } else if(reqType == MESSAGE.REQUEST_TYPE.STATUSCHECK) {
+
+        /* if txn is still in pending state then we need to just update the retry time for scheduling the next one */
+        if (!(_.get(message, 'inStatusMap.responseCode', null))) {
+            _.set(message, 'rechargeGwResponse.gwTxnErrorCode', _.get(message, 'statuscheckGwResponse.gwTxnErrorCode'));
+            message = self.rules.applyRules(message, RULE_TAG.errormapping);
+        }
+        if (!(_.get(message, "inStatusMap.responseCode",null))) {
+            _.set(message, "inStatusMap.responseCode", "07");
+            _.set(message, "inStatusMap.transactionStatus", "PENDING");
+        }
+        var errMsg = _.get(self, 'rules.ecGwMapped.' + message.currentGw + '.' + message.inStatusMap.transactionStatus + '.' + message.rechargeGwResponse.gwTxnErrorCode, '');
+        _.set(message, 'inStatusMap.gwErrorMsg', (errMsg || _.get(message, 'inStatusMap.gwErrorMsg')));
+
+        var attempt = _.get(message, 'attempt');
+        if (_.get(message, "inStatusMap.responseCode") && _.get(message, "inStatusMap.responseCode") == '07') {  
+
+            self._updateStatusCheckAttempts(message)
+            .then(function(){
+                //in case attempts count is provided and it is more than then we have to remove the entry else not
+                if (attempt && attempt > 4)
+                    return self._deleteStatusCheckEntry(message);
+
+            });
+
+        } else{
+            /* Updating recharge db with new status */
+            self._updateRechargeTxnPostScDb(message)
+                .then(function() {
+                    /* Introduce a callback as IN used to do */
+                    return self._initiateSelfInCallback(message);
+                })
+                .then(function() {
+                    /* Delete entry from statuscheck_txn table for this order */
+                    return self._deleteStatusCheckEntry(message);
+                });
+        }
+    }
+    else {
+        L.error("_handleIncomingDeferredMessages", "UnIdentified Message Type : Plese check ", reqType, JSON.stringify(message));
+    }
+};
+
+
+/* function to handle incoming message for rule engine */
+rengine.prototype.__incomingMessageRuleEngine = function(rmqMsg, source, cbAck, cbNack) {
+    // L.info(" rengine.prototype.__incomingMessageRuleEngine [x] %s:'%s'",
+    //     rmqMsg.fields.routingKey,
+    //     VALIDATOR.toString(rmqMsg.content)
+    // );
+
+    var
+        self            = this,
+        routingKey      = rmqMsg.fields.routingKey,
+        message         = JSON.parse(VALIDATOR.toString(rmqMsg.content)),
+
+        reqType         = null,
+        msgId           = null,
+        toDefer         = null;
+
+    /*
+        Pass the message through Rule Engine to see what it makes of it
+        Error Coding 
+    */
+    message = self.rules.applyRules(message, RULE_TAG.errormapping);
+
+    
+    /* This is to mark a default response as PENDING in case no error code is settled */
+    if (_.get(message, "inStatusMap.responseCode") == 'IR') {
+        _.set(message, "inStatusMap.responseCode", "07");
+        _.set(message, "inStatusMap.transactionStatus", "PENDING");
+    }
+
+    // Request type and message id
+    reqType     = message.reqType;
+    msgId       = message.id;
+
+    if(reqType == MESSAGE.REQUEST_TYPE.RECHARGE) {
+
+        /*
+            Lets set inStatusMap.gwErrorMsg to something which will help Monitoring 
+            instantly realize what is the issue
+
+            Set Error code in case of connection Error
+        */
+
+        if(_.get(message, 'rechargeGwResponse.connectionError', false)) {
+            _.set(message, 'inStatusMap.gwErrorMsg', 'Conn Err : ' + _.get(message, 'rechargeGwResponse.connectionErrorCode'));
+        } else {
+            var errMsg = _.get(self, 'rules.ecGwMapped.' + message.currentGw + '.' + message.inStatusMap.transactionStatus + '.' + message.rechargeGwResponse.gwTxnErrorCode, '');
+            _.set(message, 'inStatusMap.gwErrorMsg', (errMsg || _.get(message, 'inStatusMap.gwErrorMsg')));
+        }
+
+        /* Update the message in DB first */
+        self._updateRechargeTxnDb(message)
+
+        .then(function() {
+            /* Introduce a callback as IN used to do */
+            return self._initiateSelfInCallback(message);
+        })
+        .then(function () {
+            message = self.rules.applyRules(message, RULE_TAG.reinitiation);
+            toDefer = _.get(message, 'deferCurrent', null);
+                if (toDefer && Object.keys(toDefer).length) {
+                    return self._insertDeferredTxnDb(message);
+                } else {
+                    return Q(undefined);
+                }
+        })
+
+        .then(function(){
+            L.verbose("__incomingMessageRuleEngine", "Setting Redis Data");
+
+            var
+                redisKey = UTIL.format(
+                            '%s__%s__%s',
+                            _.get(message, 'userData.recharge_number'),
+                            _.get(message, 'userData.amount'),
+                            _.get(message, 'inStatusMap.responseCode')
+                        ),
+                redisVal = MOMENT().format('X'); // seconds
+
+                //self.redis
+            return self.redis.setRedisData(redisKey, redisVal);
+        })
+
+        .fin(function() {
+
+            /* Ack the message */
+            cbAck(rmqMsg);
+
+        });
+
+
+    // VALIDATION CALLBACK MOST PROBABLY
+    } else if(reqType == MESSAGE.REQUEST_TYPE.VALIDATION) {
+
+        /* Ack it
+            Why ack it initially ?
+            No Reason ..
+        */
+        cbAck(rmqMsg);
+
+        /*
+            Here we first see error code mapping of current Gateway
+            and See if we need to again route it somewhere else
+
+            The last Gateway response message is its actual message
+        */
+
+        /*
+            Decide if validation was successful or not
+        */
+        var validationResponse = _.get(message, 'validationGwResponse', null);
+        
+        if (_.get(validationResponse,'deducedStatus', null) === false) { // This is correct Response
+            message.validationSuccessful = false;
+            message.frontendErrorMessage = _.get(validationResponse, 'frontendErrorMessage');
+        } else {
+            message.validationSuccessful = true;
+        }
+
+        // Lets cleat the timeout first
+        clearTimeout(_.get(self.syncCallbackMaps, message.id + '.timer' , null));
+
+        // Generate the Callback self.syncCallbackMaps       = {}; 
+        var cb = _.get(self.syncCallbackMaps, message.id + '.cb' , null);
+        if(cb) {
+
+            // initiate the callbacks as registered by the app
+            try         {   cb(message);    }
+            catch(ex)   {
+                L.error("rengine.prototype.__incomingMessageRuleEngine :: Exception in calling callback ", ex);
+            }
+
+            // We remove the callback reference once we are done
+            delete self.syncCallbackMaps[msgId];
+        }
+        else {
+            L.info("rengine.prototype.__incomingMessageRuleEngine :: No callback found for msgID ", msgId);
+        }
+    } else if(reqType == MESSAGE.REQUEST_TYPE.STATUSCHECK) {
+        /* if txn is still in pending state then we need to just update the retry time for scheduling the next one */
+        
+        cbAck(rmqMsg);
+
+        var attempt = _.get(message, 'attempt');
+
+        if (_.get(message, "inStatusMap.responseCode") == '07') {  
+
+            self._updateStatusCheckAttempts(message)
+            .then(function(){
+                //in case attempts count is provided and it is more than then we have to remove the entry else not
+                if (attempt && attempt < 4)
+                    return self._deleteStatusCheckEntry(message);
+
+            });
+
+        } else{
+            /* Updating recharge db with new status */
+            self._updateRechargeTxnPostScDb(message)
+                .then(function() {
+                    /* Introduce a callback as IN used to do */
+                    return self._initiateSelfInCallback(message);
+                })
+                .then(function() {
+                    /* Delete entry from statuscheck_txn table for this order */
+                    return self._deleteStatusCheckEntry(message);
+                });
+        }
+    }
+    else {
+        L.error("__incomingMessageRuleEngine", "UnIdentified Message Type : Plese check ", reqType, JSON.stringify(message));
+    }
+
+
+};
+
+/* Get Status Check Message */
+rengine.prototype.genStatusCheckMessage = function(txnID) {
+    return MESSAGE.genMsg(MESSAGE.REQUEST_TYPE.STATUSCHECK, txnID);
+};
+
+/* Initiate Status check Request */
+rengine.prototype.initStatusCheckRequest = function(cb, msg) {
+    var self = this;
+
+    /*
+        Pass the message through Rule Engine to see what it makes of it
+    */
+    self.rules.applyRules(msg);
+
+    if(msg.routeToGwForStatuscheck === true) {
+
+        self.syncCallbackMaps[msg.id] = cb; 
+
+        self._publishMsg(msg, {}, MESSAGE.getGwRequestKey(msg));
+    }
+    else return cb(msg);
+
+};
+
+
+/* Get Validation Message */
+rengine.prototype.genValidationMessage = function() {
+    return MESSAGE.genMsg(MESSAGE.REQUEST_TYPE.VALIDATION);
+};
+
+
+/* Initiate Validation Request */
+rengine.prototype.initValidationRequest = function(cb, msg) {
+    var self = this;
+
+    /*
+        1. Pass the message through Rule Engine to see what it makes of it
+    */
+    // msg = self.rules.applyRules(msg, RULE_TAG.validationredirection);
+    msg = self.rules.applyRules(msg);
+
+    /*
+        reject or forward ?
+
+        Return if Validation failed
+        Return if no operator is there
+    */
+    // L.log("After Appying rules .. ", msg);
+
+    if(msg.validationSuccessful === false)
+    {
+        // self._L.log("rengine.prototype.initValidationRequest :: Discarding Request, no Gateway found");
+        return cb(msg);
+    }
+
+    /*
+        Move forward if routeToGwForValidation is set
+    */
+
+    if(msg.routeToGwForValidation === true) {
+
+        Q(undefined)
+           // Get Gateway Queue Count
+          .then(function () {
+            return self.getGwQCount(msg);
+          })
+          .then(function (count) {
+            // Let's pass the validation if the queue is already overloaded
+             if (count > 30) {
+                // We pass the message as it is so that validation is passed
+                return cb(msg);
+             } else {
+
+                // Put callback Reference
+                // Also let's put a stopgap of 20 seconds on validation call so that
+                // if the call takes more than 20 seconds, then callback is triggered by itself.. 
+                self.syncCallbackMaps[msg.id] = { cb : cb, timer : setTimeout(self._initValidationTimeout.bind(self, msg, cb), 31*1000) }; 
+
+                // Publish it
+                var routingKey = MESSAGE.getGwRequestKey(msg);
+
+                // self._L.log("rengine.prototype.initValidationRequest :: final publish message ", msg, routingKey);
+                self._publishMsg(msg, {}, routingKey);
+             }
+          });
+    }
+    else return cb(msg);
+
+};
+/*
+    Timeout function for Validation request ..
+    This function gets initiated if the validation request doesnt return in 5 seconds ... 
+    we delete the validation callback from syncCallbackMaps and
+    return the msg as it is so that validation is passed
+*/
+rengine.prototype._initValidationTimeout = function(msg, cb) {
+    var self         = this;
+
+    L.info("Calling Timeout for validation API : ", _.get(msg, 'currentGw', null));
+    
+    // Delete the callback for this request
+    delete self.syncCallbackMaps[msg.id];
+    
+    return cb(msg);
+};
+
+/* Get Recharge Message */
+rengine.prototype.genRechargeMessage = function(txnID) {
+    return MESSAGE.genMsg(MESSAGE.REQUEST_TYPE.RECHARGE, txnID);
+};
+
+
+
+/* Initiate Recharge Request */
+rengine.prototype.raiseRechargeFromDeferred = function(cb, msg) {
+
+    var
+        self = this,
+        opts = {
+            fromDeferred : true,
+        };
+
+    self.initRechargeRequest(function(modifiedMsg, stateVariables){
+
+
+        // Delete message only if message is not published and not inserted in deferred
+        // stateVariables.insertIntoDeferred = false;
+        // stateVariables.msgPublished = false;
+
+
+    }, msg, opts);
+
+};
+
+/* Initiate Recharge Request */
+rengine.prototype.initRechargeRequest = function(cb, msg, opts) {
+    
+    if(opts === undefined) opts = {};
+
+    var
+        self                = this,
+        insertIntoDeferred  = false,
+        shouldInitiateInCb  = false,
+        msgPublished        = false,
+        toDeferByRule       = false,
+        qCountOverflow      = false,
+        toDefer             = null,
+
+        // This is to record if we were able to hit OLD IN successfully or not
+        oldInHitInitiated   = false,
+
+        // This indicates that the message is from deferred workflow
+        fromDeferred        = _.get(opts, 'fromDeferred', false);
+
+
+    L.info("initRechargeRequest", "Received recharge request" , _.get(msg, 'orderInfo.order_id', 'NO ORDER ID'));
+
+
+    Q(undefined)
+
+        /*
+            Apply Recharge Rule
+            This is required to be first step ever so that variables are set and we know what to do
+            There is a special case where we would not want the Rules to be set,
+                that is taken care of inside ths function
+        */
+        .then(function(){
+            L.verbose("initRechargeRequest", "Apply recharge rule");
+            self._applyRechargeRule(msg);
+
+            return Q(undefined);
+        })
+
+        /*
+            Fetching information about the recharge number from redis to deicde whether or not to defer this transaction
+            Commenting this for now
+        */
+        
+        .then(function(){
+            L.verbose("initRechargeRequest", "Fetching Redis Data");
+            var
+                redisKey = [
+                        UTIL.format('%s__%s__00',
+                            _.get(msg, 'userData.recharge_number', 'NA'),
+                            _.get(msg, 'userData.amount', 'NA')
+                        ),UTIL.format('%s__%s__07',
+                            _.get(msg, 'userData.recharge_number', 'NA'),
+                            _.get(msg, 'userData.amount', 'NA')
+                        ),
+                ],
+                redisVal = MOMENT().format('X'); // seconds
+                //self.redis
+            return self.redis.mgetRedisData(redisKey, redisVal);
+        })
+        .fail(function(err) {
+            L.verbose("initRechargeRequest", "Fail Promise : fetch redis data");
+
+            // If redis fails , then we DONT CARE .. we move on with SUCCESS
+            return Q(undefined);
+        })
+
+        /*
+            Set redis time value to message and apply all redis rules 
+    
+        */
+        .then(function(redisData){
+            var 
+                diffFromRedis;
+
+            redisData           = _.max(redisData);
+            diffFromRedis        = VALIDATOR.toInt(MOMENT().format('X') - redisData) || 0;// Check if order is already in system in span of 15 mins 
+
+            //Setting redis time difference key in message
+            _.set(msg,'redis__dtdiff_current_stored',diffFromRedis);
+
+            //Applying redis rules
+            self._applyRedisRule(msg);
+            return Q(undefined);
+        })
+        /*
+            Insert the Db Txn in GW Txn Table ( only if rquired)
+                Even if deferred is there we make an entry in deferred Txn table.
+                This is done so that and entry can be found at MIS.
+                Another entry is not made if msg.dbUpdateID contains a value
+
+                Will return a success status
+        */
+        .then(function(){
+            // We set the variable for deferred or not ( which must have been set by RULE ENGINE)
+            toDefer = _.get(msg, 'deferCurrent', null);
+            if (toDefer && Object.keys(toDefer).length) toDeferByRule = true;
+
+            // If dbUpdate ID id not there, then it is a candidate for gw txn
+            if(VALIDATOR.isInt(_.get(msg, 'dbUpdateID', null)) === true) {
+                L.verbose("initRechargeRequest", "Not inserting data in Gw Txn, dbUpdateID present ", msg.dbUpdateID);
+                return Q(undefined);
+            } else {
+                
+                // ONLY INSERT IFF it has to be routed to a Gateway or it has to be deferred... any other case ?
+                // This prevents its routing ti OLD IN ... 
+                if (
+                        toDeferByRule || 
+                        msg.routeToGwForRecharge === true
+                    ) {
+                    L.verbose("initRechargeRequest", "Inserting entry in GW Txn Table");
+                    return self._insertRechargeTxnDb(msg);
+                }
+                else return Q(undefined);
+            }
+        })
+
+
+
+
+
+        /*
+            Get Q count of Current Gateway ( if message has a currentGw )
+                This information will be required to take a decision of message goes in deferred txn
+        */
+        .then(function(){
+            L.verbose("initRechargeRequest", "Fetching Q count");
+            return self.getGwQCount(msg);
+        })
+        /*
+            This is when _insertRechargeTxnDb Failed ... In this case Print Error and Fail next Promise as well
+            We cant do anything now since Gateway Txn insertion has failed ..
+        */
+        .fail(function(err) {
+
+            L.verbose("initRechargeRequest", "Fail Promise : getGwQCount ");
+            // Retun next promise as failed promise
+            var q = Q.defer(); q.reject(); return q.promise;
+        })
+
+
+
+        
+
+        /*
+            Insert in Deferred Txn TAble
+                If Rule Says so or 
+                Q count says so ( msg.currentGwQCount = 0; )
+                and there is no error in DBTxn above
+
+                IF this has been done, then no way we can send message to GATEWAY
+        */
+        .then(function(){
+            var
+                currentGwQCount     = VALIDATOR.toInt(_.get(msg, 'currentGwQCount', 0)),
+                allowedQCount       = VALIDATOR.toInt(_.get(msg, 'currentGwAllowedQCount', 100)), // default 100 
+                deferTime           = MOMENT().add(120,'seconds').format('YYYY-MM-DD HH:mm:ss');
+
+            // set State variable
+            if(currentGwQCount > allowedQCount) qCountOverflow = true;
+
+            if(
+                (toDeferByRule === true) || // If deferred by Rule .. then defer it without question
+                (currentGwQCount > allowedQCount && fromDeferred === false)// Quue count needs to work only if it is not from deferred
+            ) {
+                L.verbose("initRechargeRequest", "Insert in Deferred Txn ", toDeferByRule, currentGwQCount, allowedQCount, fromDeferred);
+
+                // to check in next step
+                insertIntoDeferred = true;
+
+                // initiate Self IN Cb
+                shouldInitiateInCb = true;
+
+                return self._insertDeferredTxnDb(msg, deferTime);
+            } else {
+                L.verbose("initRechargeRequest", "Not Inserting in Deferred", currentGwQCount, allowedQCount, fromDeferred, toDeferByRule);
+                return Q(undefined);
+            }
+        })
+        /*
+            Failed from Top flow
+        */
+        .fail(function(err) {
+
+            L.verbose("initRechargeRequest", "Fail Promise : _insertDeferredTxnDb ");
+
+            // Retun next promise as failed promise
+            var q = Q.defer(); q.reject(); return q.promise;
+
+        })
+
+
+
+
+
+        /*
+            Publish message to Gateway
+            This is done if Rule says so ( msg.routeToGwForRecharge === true) 
+            and message hasnt gone to deferred ( insertIntoDeferred = false )
+            
+                Check Message went to atleast 1 route  deferred or to Gateway
+        */
+
+        .then(function(){
+            var deferred = Q.defer();
+            if(insertIntoDeferred === false) {
+
+                if(msg.routeToGwForRecharge === true) {
+                    L.verbose("initRechargeRequest", "Publishing message in Q", MESSAGE.getGwRequestKey(msg), JSON.stringify(msg));
+
+                    msgPublished = true;
+
+                    self._publishMsg(msg, {}, MESSAGE.getGwRequestKey(msg));
+                    deferred.resolve();
+                }
+                //  else if (msg.routeToOldInForRecharge === null || msg.routeToOldInForRecharge === true) {
+                //     var
+                //         inUser      = CONFIG.IN.USER,
+                //         inPassword  = CONFIG.IN.PASSWORD,
+                //         timeout     = 1,
+                //         url         = CONFIG.IN.URL_ASYNC + '?id=' + msg.orderInfo.apptxn_id,
+                //         service     = _.get(msg, 'oldINParameters.service', null),
+                //         optional2   = _.get(msg, 'oldINParameters.optional2', null),
+                //         reqData;
+                        
+                //     service     = service && service.toLowerCase();
+                //     optional2   = optional2 && optional2.toLowerCase();
+
+                //     if (service && service === 'landline' && optional2 && optional2 === 'airtel landline') {
+                //         _.set(msg, 'oldINParameters.servicename', 'Utility');
+                //         msg.oldINParameters.consumerNo = msg.oldINParameters.consumerNo.replace('-', '');
+                //     }
+
+                //     if (service && service === 'datacard' && (optional2 && (['mtnl', 'bsnl', 'idea', 'aircel', 'airtel', 'vodafone'].indexOf(optional2) !== -1))) {
+                //         _.set(msg, 'oldINParameters.optional1', 'recharge');
+                //         _.set(msg, 'oldINParameters.servicename', 'mobile');
+                //     }
+
+                //     reqData = {
+                //         'requesttype'   : 'recharge',
+                //         'appTxnId'      : _.get(msg, 'orderInfo.apptxn_id'),
+                //         'appName'       : inUser,
+                //         'appPass'       : inPassword,
+                //         'orderID'       : _.get(msg, 'orderInfo.order_id'),
+                //         'userID'        : _.get(msg, 'customerInfo.customer_id')
+                //     };
+
+                //     for (var j in msg.oldINParameters) {
+                //         reqData[j] = msg.oldINParameters[j];
+                //     }
+
+                //     if (service === 'electricity' && ((optional2 === 'MSEBMUM') || (optional2 === 'BSESR'))) {
+                //         reqData.additionalcolumn1 = 'billdesk-' + reqData.additionalcolumn1;
+                //     } else if (service === 'landline' && optional2 === 'MTNLDEL') {
+                //         reqData.additionalcolumn1 = (reqData.additionalcolumn1 && reqData.additionalcolumn1.indexOf('-') > -1) ? reqData.additionalcolumn1.split('-')[1] : reqData.additionalcolumn1;
+                //         reqData.additionalcolumn1 = 'billdesk-' + reqData.additionalcolumn1;
+                //     } else if (service === 'landline' && optional2 === 'TATA TELE') {
+                //         reqData.additionalcolumn1 = reqData.additionalcolumn1 && reqData.additionalcolumn1.replace('-', '');
+                //         if (reqData.additionalcolumn1 && reqData.additionalcolumn1.length > 10) {
+                //             reqData.additionalcolumn1 = reqData.additionalcolumn1.slice(1, 11);
+                //         }
+                //         reqData.additionalcolumn1 = 'billdesk-' + reqData.additionalcolumn1;
+                //     } else if ((service === 'gas') || (service === 'electricity')) {
+                //         reqData.additionalcolumn1 = 'billdesk';
+                //     }
+
+                //     Object.keys(reqData).forEach(function(key) {
+                //         if (!reqData[key]) delete reqData[key];
+                //     });
+
+                //     /* Prepare to hit IN */
+                //     var options = {
+                //         'uri'           : url,
+                //         'timeout'       : timeout * 1000,
+                //         'strictSSL'     : false,
+                //         'form'          : reqData,
+                //         'method'        : 'POST',
+                //     };
+
+                //     self._requestor.hit(options, {}, function(err, statcode, body, header, resp) {
+
+                //         // delete msg.oldINParameters
+
+                //         if (err || statcode != 200) {
+                //             L.error("Error in IN HIT for options", "error :: ", err, " statcode :: ", statcode," options :: ",options);
+                //             deferred.reject(err);
+                //         } else {
+                //             oldInHitInitiated = true;
+                //             deferred.resolve();
+                //         }
+                //     });
+
+                //     // Check If message was from deferred , only in that case it would not be published or deferred
+                // } 
+                else {
+                    L.critical("initRechargeRequest", "Message was neither published in GW Q nor deferred", JSON.stringify(msg));
+                    deferred.resolve();
+                }
+            } else{
+                L.verbose("initRechargeRequest", "NOT Publishing message in Q since it was deferred");
+                deferred.resolve();
+            }
+
+            return deferred.promise;
+        })
+        /*
+            Failed from Top flow or when _insertDeferredTxnDb Failed ... The message did not get deferred ... we should not proceed here ... 
+        */
+        .fail(function(err) {
+
+            L.verbose("initRechargeRequest", "Fail Promise : _publishMsg ");
+
+            // Retun next promise as failed promise
+            var q = Q.defer(); q.reject(); return q.promise;
+        })
+
+
+
+
+        /*
+            Initiate a IN callback
+                This is done once message has gone to Deferred insertIntoDeferred
+        */
+        .then(function(){
+            if(shouldInitiateInCb === true) {
+                L.verbose("initRechargeRequest", "raising self callback for Status update in FF");
+                return self._initiateSelfInCallback(msg);
+            } else {
+                L.verbose("initRechargeRequest", "NOT raising self callback for Status update in FF");
+                return Q(undefined);
+            }  
+        })
+        /*
+            Failed from Top flow
+        */
+        .fail(function(err) {
+
+            L.verbose("_insertRechargeTxnDb", "Fail Promise : _initiateSelfInCallback ");
+            // Retun next promise as failed promise
+            var q = Q.defer(); q.reject(); return q.promise;
+        })
+
+
+        /*
+            Pushing data into redis for all recharges with their time and amount
+        */
+        .then(function () {
+
+            var
+                redisKey = UTIL.format('%s__%s',
+                            _.get(msg, 'userData.recharge_number', 'NA'),
+                            _.get(msg, 'userData.amount', 'NA')
+                        ),
+                redisVal = MOMENT().format('X'); // seconds
+
+            L.verbose("initRechargeRequest", "Setting Redis Data", redisKey, redisVal);
+
+                //self.redis
+            return self.redis.setRedisData(redisKey, redisVal);
+        })
+
+        .fail(function () {
+            L.verbose("initRechargeRequest", "Fail Promise : insert into redis ");
+        })
+        /*
+            Pushing data into redis for all recharges number with time
+        */
+        .then(function () {
+
+            var
+                redisKey = UTIL.format('%s',
+                            _.get(msg, 'userData.recharge_number', 'NA')
+                        ),
+                redisVal = MOMENT().format('X'); // seconds
+
+            L.verbose("initRechargeRequest", "Setting Redis Data", redisKey, redisVal);
+
+                //self.redis
+            return self.redis.setRedisData(redisKey, redisVal);
+        })
+
+        .fail(function () {
+            L.verbose("initRechargeRequest", "Fail Promise : insert into redis ");
+        })
+        /*
+            Initiate Callback for this message
+                This is either for main Recharge flow where CB does nothing
+                Or for deferred flow , where if all went well, it deletes the message from deferred Txn table
+        */
+        .fin(function(){
+
+            if (cb) {
+                
+                var stateVars = {
+                    shouldInitiateInCb  : shouldInitiateInCb,
+                    insertIntoDeferred  : insertIntoDeferred,
+                    msgPublished        : msgPublished,
+                    oldInHitInitiated   : oldInHitInitiated,
+                    qCountOverflow      : qCountOverflow,
+                };
+            L.verbose("initRechargeRequest", "Calling CB with ", JSON.stringify(stateVars));
+
+                return cb(msg, stateVars);
+            } else
+                L.log("initRechargeRequest", "CB not present");
+        });
+
+};
+
+
+/* Send Recharge Request to Gateway */
+rengine.prototype._applyRechargeRule = function(msg) {
+    var 
+        self        = this;
+
+    /*
+        Pass the message through Rule Engine to see what it makes of it
+    */
+    if(!msg.skipApplyRule) {
+        L.verbose("_applyRechargeRule", "Applying Rules");
+        msg = self.rules.applyRules(msg, RULE_TAG.rechargeredirection);
+    }
+    else
+        L.log("_applyRechargeRule", "Skipping rules");
+    return;
+};
+
+/* To Take action depending upon redis values set */
+rengine.prototype._applyRedisRule = function(msg) {
+    var 
+        self        = this;
+
+    /*
+        Pass the message through Rule Engine to see what it makes of it
+    */
+    if(!msg.skipApplyRule) {
+        L.verbose("_applyRedisRule", "Applying Rules");
+        msg = self.rules.applyRules(msg, RULE_TAG.redisredirection);
+    }
+    else
+        L.log("_applyRedisRule", "Skipping rules");
+    return;
+};
+
+
+/* Get Queue count of Gateway */
+rengine.prototype.getGwQCount = function(msg) {
+    var 
+        self        = this,
+        qName       = MESSAGE.getGwQueueName(msg),
+        deferred    = Q.defer();
+
+    msg.currentGwQCount = 0;
+
+    // if Current Gw is not there , then return 0
+    if( VALIDATOR.toString(_.get(msg, 'currentGw', '')).length === 0) {
+        deferred.resolve();
+    } else {
+        self.toGatewayPublisher.getQcount(function(count){
+
+            L.verbose("getGwQCount", "Q count is ", count);
+            msg.currentGwQCount = count;
+            return deferred.resolve();
+
+        }, qName);
+    }
+
+    return deferred.promise;
+
+
+};
+
+
+/* Insert message in deferred_transactions DB */
+rengine.prototype._insertDeferredTxnDb = function(msg, deferTime) {
+    var
+        self        = this,
+        deferred    = Q.defer(),
+/*
+
+    deferred_transactions
++-----------------+---------------------+------+-----+-------------------+----------------+
+| Field           | Type                | Null | Key | Default           | Extra          |
++-----------------+---------------------+------+-----+-------------------+----------------+
+| id              | int(12) unsigned    | NO   | PRI | NULL              | auto_increment |
+| app_txn_id      | int(12) unsigned    | NO   | MUL | NULL              |                |
+| order_id        | int(12) unsigned    | NO   | MUL | NULL              |                |
+| req_type        | varchar(255)        | YES  |     | NULL              |                |
+| msg             | text                | YES  |     | NULL              |                |
+| rule_ref_id     | varchar(255)        | YES  | MUL | NULL              |                |
+| blocked_by_rule | tinyint(3) unsigned | NO   | MUL | 0                 |                |
+| ts_retrytime    | timestamp           | YES  | MUL | NULL              |                |
+| ts_receivedtime | timestamp           | NO   | MUL | CURRENT_TIMESTAMP |                |
++-----------------+---------------------+------+-----+-------------------+----------------+
+
+*/
+        query       = 'INSERT INTO deferred_transactions \
+                        (\
+                            app_txn_id,\
+                            order_id,\
+                            req_type,\
+                            msg,\
+                            rule_ref_id,\
+                            blocked_by_rule,\
+                            ts_retrytime,\
+                            gw_name\
+                        ) \
+                        VALUES(?,?,?,?,?,?,?,?)';
+
+    deferTime   = deferTime || new Date();
+
+    var queryParams = [
+        msg.orderInfo.apptxn_id,
+        msg.orderInfo.order_id,
+        
+        msg.reqType,
+        JSON.stringify(msg),
+        msg.deferCurrent.ruleRefId,
+
+        (msg.deferCurrent.blockByRule === true) ? 1 : 0,
+
+        (msg.deferCurrent.deferTime) ? VALIDATOR.toString(msg.deferCurrent.deferTime.format('YYYY-MM-DD HH:mm:ss')) : deferTime,
+
+        _.get(msg,'currentGw',null)
+    ];
+    L.log("rengine.prototype._insertDeferredTxnDb : query : ", query, queryParams);
+
+    /*
+        Deferred transaction related hack to send a callback of response code 13
+        The value has been shifted from 16 to check default first. 
+        This has been done to include cases where recharges are queued because of redis value
+    */
+    msg.inStatusMap.responseCode = _.get(msg,'inStatusMap.responseCode','16');
+    msg.inStatusMap.transactionStatus = _.get(msg,'inStatusMap.transactionStatus','QUEUED');
+            
+    self.sqlwrapEngine.exec(function(err, result){
+        if(err)     {
+            L.critical("_insertDeferredTxnDb", "Error : ", err);
+            deferred.reject(err);
+        }
+        else {
+            /* We update the deferredId .. no use case as of now */
+            msg.deferredId = result.insertId;
+
+            deferred.resolve();
+        }
+    },'MASTER',query, queryParams);
+
+    return deferred.promise; 
+};
+
+
+/* Insert into Wallet Balance */
+rengine.prototype._insertWalletBalance = function(msg) {
+    var
+        self        = this,
+        walletBalanceArray = _.get(msg, 'walletBalanceResp.multiple', null);
+
+    if (walletBalanceArray === null) {
+        var
+            deferred    = Q.defer(),
+
+/*
+
+    walletbalance_walletbalancecheck
++---------------+--------------+------+-----+---------+----------------+
+| Field         | Type         | Null | Key | Default | Extra          |
++---------------+--------------+------+-----+---------+----------------+
+| id            | int(11)      | NO   | PRI | NULL    | auto_increment |
+| Gateway       | varchar(255) | YES  |     | NULL    |                |
+| WalletBalance | varchar(255) | YES  |     | NULL    |                |
+| RawMsg        | longtext     | YES  |     | NULL    |                |
+| CreatedAt     | datetime(6)  | YES  |     | NULL    |                |
++---------------+--------------+------+-----+---------+----------------+
+
+*/
+            query       = 'INSERT INTO `walletbalance_walletbalancecheck` \
+                        (\
+                            `Gateway`,\
+                            `WalletBalance`,\
+                            `RawMsg`,\
+                            `CreatedAt` \
+                        ) \
+                        VALUES(?,?,?, now())';
+
+        var queryParams = [
+            _.get(msg, 'currentGw', ''),
+            _.get(msg, 'walletBalanceResp.balanceStr', ''),
+            _.get(msg, 'walletBalanceResp.raw', ''),
+        ];
+
+        L.verbose("_insertWalletBalance", " query : ", query, queryParams);
+
+        self.sqlwrapEngine.exec(function(err, result){
+            if(err)     {
+                L.error("_insertWalletBalance", "Error : ", err, query, queryParams);
+                deferred.reject(err);
+            }
+            else {
+                L.verbose("_insertWalletBalance", " Result : ", result);
+                deferred.resolve();
+            }
+        },'MASTER',query, queryParams);
+
+        return deferred.promise;
+    }
+    /* Array of walletBalanceResps */
+    else {
+        var promiseArray = [];
+
+        walletBalanceArray.forEach(function (walletBalanceResp) {
+            var
+                deferred = Q.defer(),
+                query    = 'INSERT INTO `walletbalance_walletbalancecheck` \
+                        (\
+                            `Gateway`,\
+                            `WalletBalance`,\
+                            `RawMsg`,\
+                            `CreatedAt` \
+                        ) \
+                        VALUES(?,?,?, now())';
+
+            var queryParams = [
+                _.get(msg, 'currentGw', ''),
+                _.get(walletBalanceResp, 'balanceStr', ''),
+                _.get(walletBalanceResp, 'raw', ''),
+            ];
+
+            L.verbose("_insertWalletBalance", " query : ", query, queryParams);
+
+            promiseArray.push(self.sqlwrapEngine.exec(function(err, result){
+                if(err)     {
+                    L.error("_insertWalletBalance", "Error : ", err, query, queryParams);
+                    deferred.reject(err);
+                }
+                else {
+                    L.verbose("_insertWalletBalance", " Result : ", result);
+                    deferred.resolve();
+                }
+            },'MASTER',query, queryParams));
+        });
+
+        return Q.all(promiseArray);
+    }
+};
+
+
+/* Insert message in paytm_in DB */
+rengine.prototype._insertRechargeTxnDb = function(msg) {
+    var
+        self        = this,
+        deferred    = Q.defer(),
+
+/*
+
+    gateway_transactions
+    +-----------------+------------------+------+-----+-------------------+----------------+
+    | Field           | Type             | Null | Key | Default           | Extra          |
+    +-----------------+------------------+------+-----+-------------------+----------------+
+    | id              | int(12) unsigned | NO   | PRI | NULL              | auto_increment |
+    | app_txn_id      | int(12) unsigned | NO   | MUL | NULL              |                |
+    | order_id        | int(12) unsigned | NO   | MUL | NULL              |                |
+    | gw_name         | varchar(255)     | YES  |     | NULL              |                |
+    | gw_errormessage | text             | YES  |     | NULL              |                |
+    | gw_errorcode    | varchar(255)     | YES  |     | NULL              |                |
+    | gw_refid        | varchar(255)     | YES  | MUL | NULL              |                |
+    | ref_id          | varchar(255)     | YES  | MUL | NULL              |                |
+    | attempt         | tinyint(3)       | YES  |     | NULL              |                |
+    | ts_senttime     | timestamp        | NO   | MUL | CURRENT_TIMESTAMP |                |
+    | ts_receivedtime | timestamp        | NO   | MUL | CURRENT_TIMESTAMP |                |
+    +-----------------+------------------+------+-----+-------------------+----------------+
+
+*/
+
+    /*
+        OLD Query , we have to perform some more tasks , so here goes query , and is replaced by stored proc
+
+        query       = 'INSERT INTO gateway_transactions \
+                        (\
+                            app_txn_id,\
+                            order_id,\
+                            gw_name,\
+                            ref_id,\
+                            attempt,\
+                            msg,\
+                            in_responsecode,\
+                            in_responsemessage\
+                        ) \
+                        VALUES(?,?,?,?,?,?,?,?)',
+        queryParams = [
+            _.get(msg,'orderInfo.apptxn_id',null),
+            _.get(msg,'orderInfo.order_id',null),
+            _.get(msg,'currentGw',null),
+            _.get(msg,'id',null),
+            _.get(msg,'rechargeAttempt',null),
+            JSON.stringify(msg),
+            _.get(msg,"inStatusMap.responseCode", null),
+            _.get(msg,"inStatusMap.transactionStatus", null)
+        ];
+    */
+
+        query       = 'CALL insert_gw_txn_v2 (?,?,?,?,?,?,?,?)',
+        queryParams = [
+            _.get(msg,'orderInfo.apptxn_id',null),
+            _.get(msg,'orderInfo.order_id',null),
+            _.get(msg,'currentGw',null),
+            _.get(msg,'id',null),
+            _.get(msg,'rechargeAttempt',null),
+            JSON.stringify(msg),
+            _.get(msg,"inStatusMap.responseCode", null),
+            _.get(msg,"inStatusMap.transactionStatus", null)
+        ];
+
+
+    L.verbose("_insertRechargeTxnDb", " query : ", query, VALIDATOR.toString(queryParams));
+
+    self.sqlwrapEngine.exec(function(err, result){
+        if(err)     {
+            L.error("_insertRechargeTxnDb", "Error ", err, query, queryParams);
+            deferred.reject(err);
+        }
+        else {
+
+            /* Sample Result
+                [ [ { last_id: 22 } ],
+                  { fieldCount: 0,
+                    affectedRows: 0,
+                    insertId: 0,
+                    serverStatus: 2,
+                    warningCount: 0,
+                    message: '',
+                    protocol41: true,
+                    changedRows: 0 } ]
+            */
+
+
+            // L.log("rengine.prototype._insertRechargeTxnDb : Result : ", result);
+
+            /* We update the dbUpdateID so as to Aid DB quickly */
+            msg.dbUpdateID = result[0][0].last_id;
+
+            /* we also have a new Message ID now */
+            msg.id = msg.dbUpdateID;
+
+            L.verbose("_insertRechargeTxnDb", "Set  dbUpdateID and msg id to : ", msg.dbUpdateID);
+            deferred.resolve();
+        }
+    },'MASTER',query, queryParams);
+
+    return deferred.promise; 
+};
+
+
+/* Update message in gateway transaction */
+rengine.prototype._updateRechargeTxnDb = function(msg) {
+    var
+        self        = this,
+        deferred    = Q.defer(),
+        updParam    = 'id',
+        updatedId   = _.get(msg, 'dbUpdateID', null),
+
+/*
+
+    gateway_transactions
+    +-----------------+------------------+------+-----+-------------------+----------------+
+    | Field           | Type             | Null | Key | Default           | Extra          |
+    +-----------------+------------------+------+-----+-------------------+----------------+
+    | id              | int(12) unsigned | NO   | PRI | NULL              | auto_increment |
+    | app_txn_id      | int(12) unsigned | NO   | MUL | NULL              |                |
+    | order_id        | int(12) unsigned | NO   | MUL | NULL              |                |
+    | gw_name         | varchar(255)     | YES  |     | NULL              |                |
+    | gw_errormessage | text             | YES  |     | NULL              |                |
+    | gw_errorcode    | varchar(255)     | YES  |     | NULL              |                |
+    | gw_refid        | varchar(255)     | YES  | MUL | NULL              |                |
+    | ref_id          | varchar(255)     | YES  | MUL | NULL              |                |
+    | attempt         | tinyint(3)       | YES  |     | NULL              |                |
+    | ts_senttime     | timestamp        | NO   | MUL | CURRENT_TIMESTAMP |                |
+    | ts_receivedtime | timestamp        | NO   | MUL | CURRENT_TIMESTAMP |                |
+    +-----------------+------------------+------+-----+-------------------+----------------+
+
+*/
+
+    // L.log("rengine.prototype._updateRechargeTxnDb : ", updatedId, updParam);
+    //updating msg in gateway_transactions as it is a sync flow so we should update msg in db also
+    /*
+       We are using CASE to update in_responsecode and in_responsemessage only if the existing status in is 00,08 or 11
+
+       It is also important to set in_responsemessage before in_responsecode 
+        because both take existing in_responsecode as a benchmark in CASE
+    */
+    // query       = 'UPDATE gateway_transactions \
+    //                 SET \
+    //                     msg=?,\
+    //                     gw_errormessage=?,\
+    //                     gw_errorcode=?,\
+    //                     gw_refid=?,\
+    //                     gw_connectionerror=?,\
+    //                     gw_connectionerrorcode=?,\
+    //                     gw_connectionerrormessage=?,\
+    //                     ts_receivedtime=now() ,\
+    //                     gw_name= CASE WHEN gw_name is null or gw_name="" THEN ? ELSE gw_name END, \
+    //                     in_responsemessage= CASE WHEN in_responsecode not in ("00", "08", "11") or in_responsecode is null THEN ? ELSE in_responsemessage END, \
+    //                     in_responsecode= CASE WHEN in_responsecode not in ("00", "08", "11") or in_responsecode is null THEN ?  ELSE in_responsecode END\
+    //                 WHERE \
+    //                     ' + updParam + '=?;';
+
+    query       = 'CALL update_gw_txn_v2 (?,?,?,?,?,?,?,?,?,?,?)',
+    
+    queryParams = [
+            _.get(msg,'id',null),
+
+            VALIDATOR.toString(_.get(msg, "currentGw",'')),
+            
+            JSON.stringify(msg),
+            
+            
+            VALIDATOR.toString(_.get(msg,"inStatusMap.responseCode", '')),
+            VALIDATOR.toString(_.get(msg,"inStatusMap.transactionStatus", '')),
+
+            //TEXT field in mysql has length of 65535. Make sure not to exceed it.
+            //(like in the case of dishtvdirect failure, which gives a whole html page).
+            
+            VALIDATOR.toString(_.get(msg,"rechargeGwResponse.gwTxnErrorMessage", '')).slice(0,65535),
+            VALIDATOR.toString(_.get(msg,"rechargeGwResponse.gwTxnErrorCode", '')),
+            VALIDATOR.toString(_.get(msg,"rechargeGwResponse.gwRefId", '')),
+            
+
+            VALIDATOR.toString(_.get(msg,"rechargeGwResponse.connectionError", '')),
+            VALIDATOR.toString(_.get(msg,"rechargeGwResponse.connectionErrorCode", '')),
+            VALIDATOR.toString(_.get(msg,"rechargeGwResponse.connectionErrorMessage", '')).slice(0, 65535)
+   
+    ];
+
+
+    // L.log("rengine.prototype._updateRechargeTxnDb : query : ", query, queryParams);
+
+    self.sqlwrapEngine.exec(function(err, result){
+        if(err)     {
+            L.critical("rengine.prototype._updateRechargeTxnDb : err : ", err, query, queryParams);
+            deferred.reject(err);
+        }
+        else {
+            // L.log("rengine.prototype._updateRechargeTxnDb : Result : ", result);
+
+            /* Result sample
+                { fieldCount: 0,
+                  affectedRows: 0,
+                  insertId: 0,
+                  serverStatus: 2,
+                  warningCount: 0,
+                  message: '(Rows matched: 0  Changed: 0  Warnings: 0',
+                  protocol41: true,
+                  changedRows: 0 }
+
+                Changed and affected rows any use to us ?
+            */
+
+            deferred.resolve();
+        }
+    },'MASTER',query, queryParams);
+
+    return deferred.promise; 
+};
+
+rengine.prototype._fetchAppTxnIdForCallback = function(msg) {
+    var
+        self             = this,
+        deferred         = Q.defer(),
+        updParam    =  null,
+        query       = null,
+        queryParams = null,
+        updatedId   = null,
+        cbRefId     = _.get(msg, 'rechargeGwCallback.refId', null),
+        cbGwRefId   = _.get(msg, 'rechargeGwCallback.gwRefId', null);
+
+
+    /*
+        We have our preference
+        If refid is there in callback then we use that
+        If gateway reference ID is there, use that
+    */
+
+    if(cbRefId !== null) {
+        updParam = 'id';    //As ref_id is nothing but id of gwTxn
+        updatedId   = parseInt(cbRefId, 10);
+    }
+    else if(cbGwRefId !== null) {
+        updParam = 'gw_refid';
+        updatedId   = cbGwRefId;
+    }
+    else {
+        L.error("_fetchAppTxnIdForCallback", "Invalid callback ... refId and  gwRefId are available ", msg);
+        deferred.reject();
+        return deferred.promise;
+    }
+    //not updating msg in gateway_transactions as it is not a  sync flow so we should update NOT msg in db also
+
+    query = 'SELECT app_txn_id, \
+                    id \
+               FROM \
+                    gateway_transactions \
+               WHERE \
+                   ' + updParam + '=?;';
+    
+    queryParams = [
+        updatedId
+    ];
+
+
+    self.sqlwrapEngine.exec(function(err, result){
+        if(err)     {
+            L.error("rengine.prototype._fetchAppTxnIdForCallback : err : ", err, query, queryParams);
+            deferred.reject(err);
+        }
+        else {
+            L.verbose("rengine.prototype._fetchAppTxnIdForCallback : Result : ", result);
+
+            /* Result sample
+                [{
+                  app_txn_id : '234'
+                }]
+
+                Changed and affected rows any use to us ?
+            */
+
+            msg.id        = _.get(result, '0.id' , null);
+            msg.orderInfo = msg.orderInfo || {};
+            msg.orderInfo.apptxn_id = _.get(result, '0.app_txn_id', null);
+
+            deferred.resolve();
+        }
+    },'MASTER',query, queryParams);
+
+    return deferred.promise; 
+
+};
+
+/* Update Database in case of Callback */
+rengine.prototype._updateCallbackRechargeTxnDb = function(msg) {
+    var
+        self        = this,
+        deferred    = Q.defer(),
+        updParam    =  null,
+        query       = null,
+        queryParams = null,
+        updatedId   = null,
+        cbRefId     = _.get(msg, 'rechargeGwCallback.refId', null),
+        cbGwRefId   = _.get(msg, 'rechargeGwCallback.gwRefId', null);
+
+
+    /*
+        We have our preference
+        If refid is there in callback then we use that
+        If gateway reference ID is there, use that
+    */
+
+    if(cbRefId !== null) {
+        updParam = 'id';        //As refId is nothing but id of GWTxn
+        updatedId   = parseInt(cbRefId, 10);
+    }
+    else if(cbGwRefId !== null) {
+        updParam = 'gw_refid';
+        updatedId   = cbGwRefId;
+    }
+    else {
+        L.error("_updateCallbackRechargeTxnDb", "Invalid callback ... refId and  gwRefId are available ", msg);
+        deferred.reject();
+        return deferred.promise;
+    }
+    //not updating msg in gateway_transactions as it is not a  sync flow so we should update NOT msg in db also
+
+    query = 'UPDATE gateway_transactions \
+        SET \
+            gw_cb_raw=?,\
+            gw_cb_errormessage=?,\
+            gw_cb_errorcode=?,\
+            ts_gw_cb=now(),\
+            in_responsecode=? ,\
+            in_responsemessage=? \
+        WHERE \
+            ' + updParam + '=?;';
+
+
+    
+    queryParams = [
+        VALIDATOR.toString(_.get(msg,"rechargeGwCallback.raw", '')),
+        VALIDATOR.toString(_.get(msg,"rechargeGwCallback.gwTxnErrorMessage", '')),
+        VALIDATOR.toString(_.get(msg,"rechargeGwCallback.gwTxnErrorCode", '')),
+
+        VALIDATOR.toString(_.get(msg,"inStatusMap.responseCode", '')),
+        VALIDATOR.toString(_.get(msg,"inStatusMap.transactionStatus", '')),
+
+        updatedId
+    ];
+
+
+    self.sqlwrapEngine.exec(function(err, result){
+        if(err)     {
+            L.error("rengine.prototype._updateCallbackRechargeTxnDb : err : ", err, query, queryParams);
+            deferred.reject(err);
+        }
+        else {
+            // console.log("rengine.prototype._updateCallbackRechargeTxnDb : Result : ", result);
+
+            /* Result sample
+                {
+                  fieldCount: 0,
+                  affectedRows: 0,
+                  insertId: 0,
+                  serverStatus: 2,
+                  warningCount: 0,
+                  message: '(Rows matched: 0  Changed: 0  Warnings: 0',
+                  protocol41: true,
+                  changedRows: 0 }
+
+                Changed and affected rows any use to us ?
+            */
+
+            deferred.resolve();
+        }
+    },'MASTER',query, queryParams);
+
+    return deferred.promise; 
+};
+
+
+/*
+This function is for updating statuscheck txn table to either update the retry table or delete the entry from it
+*/
+rengine.prototype._updateStatusCheckAttempts = function(message) {
+
+    var
+        self        = this,
+        deferred    = Q.defer(),
+        query       = UTIL.format(
+                        'UPDATE \
+                            statuscheck_transactions \
+                        SET \
+                            gw_errorcode=?,\
+                            attempt=?,\
+                            ts_retry_time=?\
+                        WHERE \
+                            id=?'
+                ),
+        queryParams = [
+                VALIDATOR.toString(_.get(message, 'statuscheckGwResponse.gwTxnErrorCode')),
+                VALIDATOR.toInt(_.get(message, 'attempt')),
+                self._setRetryTime(_.get(message, 'attempt')),
+                _.get(message, 'id')
+                ];
+
+    L.verbose('_updateStatusCheckAttempts', 'query', query, queryParams);
+
+    self.sqlwrapEngine.exec(function (err, rows, fields, poolName, query, params) {
+        if (err) {
+            L.error('_updateStatusCheckAttempts', 'Error in fetching records. Error - ', err);
+        }
+
+        deferred.resolve();
+
+    }, 'MASTER', query, queryParams);
+
+    return deferred.promise;
+};
+/*
+This function is for updating gw_txn table to post status check
+*/
+rengine.prototype._updateRechargeTxnPostScDb = function(message) {
+    var
+        self        = this,
+        deferred    = Q.defer(),
+        query       = UTIL.format(
+                        'UPDATE \
+                            gateway_transactions \
+                        SET\
+                            gw_errormessage=?,\
+                            gw_errorcode=?,\
+                            gw_refid=?,\
+                            in_responsecode=?,\
+                            in_responsemessage=?\
+                        WHERE \
+                            id=?'
+                ),
+        queryParams = [
+                VALIDATOR.toString(_.get(message,"inStatusMap.gwErrorMsg", '')),
+                VALIDATOR.toString(_.get(message,"statuscheckGwResponse.gwTxnErrorCode", '')),
+                VALIDATOR.toString(_.get(message,"statuscheckGwResponse.gwRefId", '')),
+                VALIDATOR.toString(_.get(message,"inStatusMap.responseCode", '')),
+                VALIDATOR.toString(_.get(message,"inStatusMap.transactionStatus", '')),
+                parseInt(_.get(message, 'id', 0), 10),
+                ];
+
+    L.info("_updateRechargeTxnPostScDb", "query ", query,queryParams);
+
+    self.sqlwrapEngine.exec(function (err, rows, fields, poolName, query, params) {
+        if (err) {
+            L.error('_updateRechargeTxnPostScDb', 'Error in updating records. Error - ', err);
+        }
+        deferred.resolve();
+
+    }, 'MASTER', query, queryParams);
+
+    return deferred.promise;
+};
+/* Update the retry time for scheduling the next statuscheck at*/
+rengine.prototype._setRetryTime = function(attempt){
+    return MOMENT().add(Math.pow(2, attempt) * 60,'m').format('YYYY-MM-DD HH:mm:ss');
+};
+/*
+This function is for deleting an entry from statuscheck txn post a successful statuscheck
+*/
+rengine.prototype._deleteStatusCheckEntry = function(message) {
+
+    var
+        self        = this,
+        deferred    = Q.defer(),
+        query       = UTIL.format('\
+            DELETE FROM \
+                statuscheck_transactions\
+            WHERE\
+                id=?'
+        ),
+        queryParams = [
+            _.get(message, 'id')
+        ];
+    
+    L.log("_deleteStatusCheckEntry", "Query ", query);
+
+    self.sqlwrapEngine.exec(function (err, rows, fields, poolName, query, params) {
+        if (err) {
+            L.error('_deleteStatusCheckEntry', ' Error in deleting records. Error - ', err);
+        }
+
+        deferred.resolve();
+    }, 'MASTER', query, queryParams);
+
+    return deferred.promise;
+};
+
+/*hack to fetch operator reference number for different gateways*/
+rengine.prototype._fetchOperatorReferenceNumber = function(msg) {
+    var
+        currentGw     = _.get(msg, 'currentGw'),
+        operatorRefNo = '';
+
+    switch (currentGw) {
+        case 'euronet':
+            operatorRefNo = _.get(msg, 'rechargeGwResponse.operatorRefNo', null);
+            break;
+        case 'billdesk':
+        case 'cyberplat':
+            operatorRefNo = '';
+            break;
+        default: 
+            operatorRefNo = _.get(msg, 'rechargeGwResponse.gwRefId', null) || _.get(msg, 'rechargeGwCallback.gwRefId', null);
+        break;
+    }
+    return operatorRefNo;
+};
+/* Initiate callback to IN */
+rengine.prototype._initiateSelfInCallback = function(msg) {
+
+    var
+        self        = this,
+        reqData     = {
+            service                 : 'IN',
+            clienttransactionid     : msg.orderInfo.apptxn_id,
+            transactionid           : msg.id,
+
+            source                  : 'ruleengine',
+            rechargemisupdated      : '1',
+
+            responsecode            :  _.get(msg, "inStatusMap.responseCode", '07'),
+            transactionstatus       : _.get(msg, "inStatusMap.transactionStatus", 'PENDING'),
+
+            operatorref             : self._fetchOperatorReferenceNumber(msg),
+            operatorEmail           : _.get(msg,"rechargeGwResponse.merchant_email", null)
+        },
+        requestOpts,
+        deferred = Q.defer();
+
+
+    requestOpts     = {
+        uri       : self.config.service.endpoint + 'in/callback',
+        method    : 'POST',
+        body      : JSON.stringify(reqData),
+        timeout   : 10000,
+        headers    : {'Content-Type': 'application/json'}
+    };
+
+    self._requestor.hit(requestOpts, {}, function(err, statcode, body, header, resp) {
+        if (err || statcode != 200) {
+            L.error("_initiateSelfInCallback", "Callback failed for options" + UTIL.inspect(requestOpts));
+            return deferred.reject(err || statcode);
+        } else
+            return deferred.resolve();
+    });
+
+    return deferred.promise; 
+};
+
+
+// /* ES stateful rules */
+// rengine.prototype._getRechargeOrderInfoFromEs = function(cb, msg) {
+//     var
+//         self        = this;
+
+//     // Get Es template
+//     var esTemplate = _.cloneDeep(self._esTemplates.validation);
+
+
+//     //date filter
+//     _.first(esTemplate.query.filtered.filter.bool.must).range.currentTime.from =MOMENT().subtract(7,'days').utc().format('YYYY-MM-DDTHH:mm:ss');
+//     _.first(esTemplate.query.filtered.filter.bool.must).range.currentTime.to   = MOMENT().utc().format('YYYY-MM-DDTHH:mm:ss');
+
+//     // Check recharge number
+//     if(_.get(msg, "userData.recharge_number", null))
+//         _.last(esTemplate.query.filtered.filter.bool.must).term.userData_recharge_number = msg.userData.recharge_number;
+//         // esTemplate.aggs.search_by_number.filter.term.userData_recharge_number = msg.userData.recharge_number;
+//     else    // remove that from template
+//         return cb();
+//         // delete esTemplate.aggs.search_by_number;
+
+
+//     // Check customer Id
+//     // if(_.get(msg, "customerInfo.customer_id", null))
+//     //     esTemplate.aggs.search_by_customer.filter.term.customerInfo_customer_id = msg.customerInfo.customer_id;
+//     // else    // remove that from template
+//     //     delete esTemplate.aggs.search_by_customer;
+
+//     // hit ES
+//     var requestOpts = {
+//         uri         : self.config.es.ORDERSEARCH.BASEURL + self.config.es.ORDERSEARCH.SEARCH_INDEX + self.config.es.ORDERSEARCH.TYPE + '_search?search_type=count',
+//         method      : 'POST',
+//         body        : JSON.stringify(esTemplate),
+//         timeout     : 3 * 1000, // 3 second timeout
+//     };
+//     self._requestor.hit(requestOpts, {}, function(err, statcode, body, header, resp) {
+
+//          // Response Example
+//          //    {
+//          //     "took" : 110,
+//          //     "timed_out" : false,
+//          //     "_shards" : {
+//          //       "total" : 2,
+//          //       "successful" : 2,
+//          //       "failed" : 0
+//          //     },
+//          //     "hits" : {
+//          //       "total" : 2937972,
+//          //       "max_score" : 0.0,
+//          //       "hits" : [ ]
+//          //     },
+//          //     "aggregations" : {
+//          //       "search_by_customer" : {
+//          //         "doc_count" : 3,
+//          //         "distinct_numbers" : {
+//          //           "value" : 2
+//          //         }
+//          //       },
+//          //       "search_by_number" : {
+//          //         "doc_count" : 2,
+//          //         "distinct_cutomers" : {
+//          //           "value" : 1
+//          //         }
+//          //       }
+//          //     }
+//          //    }
+        
+
+//         var parsedData = null;
+//         try {     parsedData = JSON.parse(body);   }
+//         catch(ex)   {
+//             console.error("rengine.prototype._getRechargeOrderInfoFromEs:: ", ex);
+//             return cb("Body looks erronous resData:" + body);
+//         }
+
+//         // var distinctNumber = _.get(parsedData, "aggregations.search_by_customer.distinct_numbers.value", null);
+//         var distinctCount = _.get(parsedData, "aggregations.distinct_cutomers.value", null);
+
+//         console.log("rengine _getRechargeOrderInfoFromEs :: ",msg.userData.recharge_number, msg.customerInfo.customer_id, " distinct customers ", distinctCount);
+//         return cb();
+//     });
+// };
+
+
+/* Submit Validation Messages to ES */
+rengine.prototype.submitValidationStats = function(msg) {
+    var
+        self        = this,
+        indexName   = 'recharge_validation_' + MOMENT().format("MM_YYYY"),
+        index       = '{"index":{"_index":"' + indexName + '","_type":"product", "_id" : "' +  msg.id + '" }}',
+        payload     = index + '\n' + JSON.stringify(MESSAGE.convertInStatsFormat(msg)) + '\n';
+    
+    // Initialize it
+    if(!self.statsBulkPayload)  self.statsBulkPayload = [];
+
+    // Lets collect payload and insert only when it crosses 1000
+    self.statsBulkPayload.push(payload);
+
+    // publish only if total messages are more than 100
+    if(self.statsBulkPayload.length >= 100) {
+
+        //publish
+        self._publishMsg(self.statsBulkPayload.join(''), null, 'statistics.recharge.validation', 'ex_elasticsearch_bulk');
+
+        // empty our buffer
+        self.statsBulkPayload = [];
+
+        L.log("submitStats", "Publishing statistics in bulk");
+    }
+
+    // Keeping for Debugging
+    // else
+    //     console.log("rengine.prototype.submitStats : Not publishing .. waiting for more to collect", self.statsBulkPayload.length);
+    
+    return;
+};
+
+
+/* Load all the product info in memory */
+rengine.prototype._loadProductInfo = function() {
+    var
+        self        = this,
+        deferred    = Q.defer(),
+
+        query       = 'SELECT \
+                        cvr.id,\
+                        cvr.product_id,\
+                        cvr.service,\
+                        cvr.paytype,\
+                        cvr.operator,\
+                        cvr.circle,\
+                        cvr.producttype \
+                    FROM \
+                        catalog_vertical_recharge cvr';
+
+    // console.log("rengine.prototype._loadProductInfo : query : ", query);
+
+    self.sqlwrapEngine.exec(function(err, result){
+        if(err)     { L.error("rengine.prototype._loadProductInfo : err : ", err); deferred.reject(err); }
+        else {
+
+            // build the product map
+            result.forEach(function(eachres){
+                self.maps.productInfo[parseInt(eachres.product_id)] = {
+                    autoId      : eachres.id,
+                    service     : eachres.service,
+                    paytype     : eachres.paytype,
+                    operator    : eachres.operator,
+                    circle      : eachres.circle,
+                    producttype : eachres.producttype,
+                };
+            });
+ 
+            L.info("rengine.prototype._loadProductInfo : Loaded Products : ", result.length);
+
+            deferred.resolve();
+        }
+    },'MASTER',query);
+
+    return deferred.promise; 
+};
+
+
+
+/* Function to get Key Value pair setting */
+rengine.prototype._getSettings = function() {
+    var
+        self        = this,
+        deferred    = Q.defer(),
+        retObj      = {},
+        query       = 'SELECT \
+                            kv.Key,\
+                            kv.Value\
+                        FROM \
+                            keyvalsetting_keyval kv';
+
+    L.verbose("_getSettings", "query : ", query);
+
+    self.sqlwrapEngine.exec(function(err, result){
+
+        if(err)     {
+            L.error("rengine.prototype._getSetting : err : ", err);
+            deferred.resolve(retObj);
+        }
+        else {
+
+            // build the product map
+            if(result && UTIL.isArray(result)) {
+                result.forEach(function(eachres){
+                    retObj[eachres.Key] = eachres.Value;
+                });
+            }
+
+            L.log("rengine.prototype._getSetting : Setting : ", JSON.stringify(retObj));
+
+            deferred.resolve(retObj);
+        }
+    },'MASTER',query);
+
+    return deferred.promise; 
+};
+
+
+module.exports = rengine;

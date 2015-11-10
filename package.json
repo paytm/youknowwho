@@ -22,6 +22,10 @@
   },
   "homepage": "https://github.com/paytm/youknowwho",
   "dependencies": {
-    "lodash": "~3.10.1"
+    "lodash": "~3.10.1",
+    "moment": "~2.10.6"
+  },
+  "devDependencies": {
+    "mocha": "~2.3.3"
   }
 }
