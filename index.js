@@ -7,7 +7,6 @@
 
 var
     /* NODE internal */
-    FS                  = require('graceful-fs'),
     UTIL                = require('util'),
     PATH                = require('path'),
     EVENTEMITTER        = require('events').EventEmitter,
@@ -16,36 +15,24 @@ var
     _                   = require('lodash'),
     Q                   = require('q'),
     MOMENT              = require('moment'),
-    RANGE               = require('tiny-range'),
+    RANGE               = require('./lib/tinyRange'),
     VALIDATOR           = require('validator'),
 
     /* NPM Paytm */
     TRANGE_BINARYSEARCH = require('tiny-range-binarysearch'),
 
-    /* Project Files */
-    SLAVEDB             = require('../../model/slavedb'),
-    MESSAGE             = require('../message.js'),
 
     /* Global Variables */
-    L                   = null,
-
-    R_ACTION_DEFER_KEYS = {
-        defer_till_exact_time   : "defer_till_exact_time",
-        defer_for_seconds       : "defer_for_seconds",
-        defer_unscheduled       : "defer_unscheduled"
-    },
 
     R_OPERATORS         = {
         AND     : "&&",
-        OR      : "||",
+        OR      : "||"
     },
 
     R_ACTIONS           = {
         RE_EXIT                 : "RE_EXIT",
         RE_INIT                 : "RE_INIT",
-        SET_VARIABLE            : "SET_VARIABLE",
-        DEFER_TXN               : "DEFER_TXN",
-        INITIATE_STATUSCHECK    : "INITIATE_STATUSCHECK"
+        SET_VARIABLE            : "SET_VARIABLE"
     },
 
     R_COND_OPS          = {
@@ -74,20 +61,22 @@ var
         'NOT_ERRORCODETAG'          : '!errorcodetag',
 
         'STRINGRANGE'              : 'stringrange',
-        'NOT_STRINGRANGE'          : '!stringrange',
+        'NOT_STRINGRANGE'          : '!stringrange'
     };
 
 
 UTIL.inherits(YKW, EVENTEMITTER);
 function YKW(config, opts) {
+
     var self = this;
     EVENTEMITTER.call(self);
 }
 
 
 YKW.prototype.__checkRange = function(rangeArray, val) {
+    var self = this;
     var result = TRANGE_BINARYSEARCH(rangeArray, val);
-    L.verbose("YKW.prototype.__checkRange", "array and value and result",VALIDATOR.toString(rangeArray), val, result);
+    self.emit("log.verbose", "YKW.prototype.__checkRange", "array and value and result" + VALIDATOR.toString(rangeArray) + " " + val + " " + result);
     return result;
 };
 
@@ -284,7 +273,6 @@ YKW.prototype.__checkOperation = function(operation, msgVal, cVal) {
 
 };
 
-
 YKW.prototype.applyRules = function(msg, tag) {
     /* Apply Rules to a message 
 
@@ -305,7 +293,7 @@ YKW.prototype.applyRules = function(msg, tag) {
     if(tag)     listofActiveRules = self.tagsRuleMap[tag];
     else        listofActiveRules = self.loadedRules;
 
-    // L.info("apply rules : ", msg);
+    self.emit("log.debug", "apply rules : " + JSON.stringify(msg));
     // In case no rules are found
     if(!UTIL.isArray(listofActiveRules)) listofActiveRules = [];
 
@@ -317,7 +305,7 @@ YKW.prototype.applyRules = function(msg, tag) {
             finalDecision       = true,
             compiledObj         = {};
 
-        // L.info("CHECKING RULE : ", eachRule);
+        // self.emit("log.info", "CHECKING RULE : " + eachRule);
 
         /*
             Conditions in RUle
@@ -338,7 +326,7 @@ YKW.prototype.applyRules = function(msg, tag) {
 
                 cDecision       = self.__checkOperation(op, msgValue, condValue);
 
-            // L.info("Checking condition : ", eachCondition, cDecision);
+            self.emit("log.debug", "Checking condition : " + JSON.stringify(eachCondition) + " " + cDecision);
 
             /* This is for Rule Trails , mostly for Debug */
             // msg.logs += UTIL.format('C:%s:%s:%s ', eachRule.id, iCondition, (cDecision ? 'T' : 'F')); 
@@ -363,7 +351,7 @@ YKW.prototype.applyRules = function(msg, tag) {
 
         } // Each condition is a rule
 
-        // L.info(" Final decision: ", finalDecision);
+        self.emit("log.debug", " Final decision: " + finalDecision);
 
         /* 
             Actions in Rule .. Check if they can be applied ... 
@@ -379,7 +367,7 @@ YKW.prototype.applyRules = function(msg, tag) {
         for(var iAction = 0; iAction < eachRule.actions.length; iAction ++) {
 
             /* This is for Rule Trails , mostly for Debug */
-            msg.logs += UTIL.format('A:%s:%s ', eachRule.id, iAction);
+            self.emit("log.debug", UTIL.format('A:%s:%s ', eachRule.id, iAction));
             
             self._applyAction(msg, eachRule.actions[iAction], eachRule);
         }
@@ -402,11 +390,10 @@ YKW.prototype.applyRules = function(msg, tag) {
         Now routing logic should just move this message ahead
     */
 
-    // L.info("APPLY RULES .. ", msg);
+    self.emit("log.debug",  "APPLY RULES .. "  + JSON.stringify(msg));
 
     return msg;
 };
-
 
 /*
     returns true ( BOOLEAN ) if string true, false if string false, otherwise string
@@ -569,103 +556,6 @@ YKW.prototype._applyAction = function(msg, action, rule) {
 
 };
 
-
-/* Apply Action Status Check */
-YKW.prototype.__applyActionInitiateSc = function(msg, action, rule) {
-    var
-        // key, value
-        actKey          = action.key,
-        actVal          = action.value,
-
-        blockByRule     = false,
-        deferTime       = null;
-
-    switch(actKey) {
-
-        case R_ACTION_DEFER_KEYS.defer_till_exact_time : {
-            deferTime = MOMENT(actVal);
-            break;
-        }
-
-        case R_ACTION_DEFER_KEYS.defer_for_seconds : {
-            deferTime = MOMENT().add(parseInt(actVal), 'seconds');
-            break;
-        }
-
-        case R_ACTION_DEFER_KEYS.defer_unscheduled : {
-            blockByRule = true;
-            break;
-        }
-
-        default : {
-            break;
-        }
-    }
-
-    // Set variable. Actual deferring we will do in Rule Engine
-    msg.deferCurrentStatusCheck = {
-        'deferTime'     : deferTime,
-        'blockByRule'   : blockByRule,
-
-        'ruleRefId'     : rule.external_reference,
-    };
-
-    if(!msg.deferCountStatusCheck)  msg.deferCountStatusCheck = 0;
-    msg.deferCountStatusCheck += 1;
-
-    if(!msg.deferRecordsStatusCheck) msg.deferRecordsStatusCheck = [];
-    msg.deferRecordsStatusCheck.push(_.cloneDeep(msg.deferCurrentStatusCheck));
-
-};
-
-
-/*
-   Apply Action DEFER
-*/
-YKW.prototype.__applyActionDeferTxn = function(msg, action, rule) {
-    var
-        // key, value
-        actKey          = action.key,
-        actVal          = action.value,
-
-        blockByRule     = false,
-        deferTime       = null;
-
-    switch(actKey) {
-
-        case R_ACTION_DEFER_KEYS.defer_till_exact_time : {
-            deferTime = MOMENT(actVal);
-            break;
-        }
-
-        case R_ACTION_DEFER_KEYS.defer_for_seconds : {
-            if(typeof actVal === "function")   actVal = VALIDATOR.toInt(eval(actVal(msg)));
-            
-            deferTime = MOMENT().add(parseInt(actVal), 'seconds');
-            break;
-        }
-
-        case R_ACTION_DEFER_KEYS.defer_unscheduled : {
-            blockByRule = true;
-            break;
-        }
-    }
-
-    L.verbose("__applyActionDeferTxn", "setting deferCurrent key for msg ",JSON.stringify(msg));
-
-    // Set variable. Actual deferring we will do in Rule Engine
-    msg.deferCurrent = {
-        'deferTime'     : deferTime,
-        'blockByRule'   : blockByRule,
-
-        'ruleRefId'     : rule.external_reference,
-    };
-    msg.deferCount += 1;
-    msg.deferRecords.push(_.cloneDeep(msg.deferCurrent));
-
-};
-
-
 /*
    Apply Action SET VARIABLE
 */
@@ -675,8 +565,8 @@ YKW.prototype.__applyActionSetVariable = function(msg, action) {
         actKey          = action.key,
         actVal          = action.value;
 
-    // L.info("MSG ", msg);
-    // L.info("ACTION ", action);
+    // self.emit("log.info", "MSG ", msg);
+    // self.emit("log.info", "ACTION ", action);
 
     // Value can be a compiled function or a direct value
     if(typeof actVal === "function")    _.set(msg,  actKey, actVal(msg));
@@ -758,42 +648,11 @@ YKW.prototype._parseRuleAction = function(action) {
 /*
     Here We load rules from Database.
     And keep reloading every 5 minutes or so ... 
-*/
-YKW.prototype.loadRules = function() {
-    var
+ */
+
+YKW.prototype.loadRules = function(r) {
+  var
         self        = this,
-        deferred    = Q.defer(),
-
-        query       = 'SELECT \
-                        rule.id,\
-                        rule.name,\
-                        rule.external_reference,\
-                        (\
-                            SELECT GROUP_CONCAT(ruletag_id) FROM rule_ruletag WHERE rule_id = rule.id\
-                        ) as tags,\
-                        rule.conditionsOperator,\
-                        rule.priority,\
-                        rule_condition.id,\
-                        rule_condition.key,\
-                        rule_condition.operation,\
-                        rule_condition.value,\
-                        rule_action.id, \
-                        rule_action.action, \
-                        rule_action.key, \
-                        rule_action.value \
-                    FROM \
-                        rule \
-                            join \
-                        rule_action \
-                            on rule.id=rule_action.rule_id \
-                            join \
-                        rule_condition \
-                            on rule.id=rule_condition.rule_id \
-                    WHERE \
-                        status = 1 \
-                    order by \
-                        rule.priority ASC',
-
         result      = [],
 
     /*
@@ -830,20 +689,7 @@ YKW.prototype.loadRules = function() {
     */
         rule_map    = {},
 
-        sqlObj      =  {
-                            'nestTables': true,
-                            'sql': query
-                    };
-
-
-    var handlecb = function(e, r) {
-        if (e || !r ) {
-            L.error("YKW.prototype.loadRules : ",e, r);
-            return deferred.resolve();
-            // deferred.reject(e || new Error('No Rows Found'));
-        }
-
-        var count   = r.length;
+        count   = r.length;
       
         r.forEach(function (item) {
             /* HAck : to parse the value as true/false boolean
@@ -945,19 +791,14 @@ YKW.prototype.loadRules = function() {
             }   
         }
 
-        // L.info("Loaded Rules : " + JSON.stringify(self.tagsRuleMap, null, 4));
-        L.info("Loaded Rules : " + self.loadedRules.length);
+       self.emit("log.info", "Loaded Rules : " + self.loadedRules.length);
+       self.emit("log.debug", "Loaded Rules : " + JSON.stringify(self.loadedRules));
+  
 
-        return deferred.resolve();
 
-    }; // handlecb
-    
-    self.sqlwrapEngine.exec(handlecb,'MASTER',sqlObj,[]);
-    
-    return deferred.promise;
 };
 
-module.exports = RULES;
+module.exports = YKW;
 
 
 
@@ -971,6 +812,7 @@ module.exports = RULES;
 
 (function() {
     if (require.main === module) {
-
+      var ykw = new YKW();
+      ykw.loadRules();
     }
 }());

@@ -15,7 +15,7 @@
     "rule",
     "engine"
   ],
-  "author": "Shrey Agarwal",
+  "author": "Paytm",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/paytm/youknowwho/issues"
@@ -23,9 +23,12 @@
   "homepage": "https://github.com/paytm/youknowwho",
   "dependencies": {
     "lodash": "~3.10.1",
-    "moment": "~2.10.6"
+    "moment": "~2.10.6",
+    "tiny-range-binarysearch": "https://github.com/paytm/tiny-range-binarysearch.git",
+    "validator": "^4.2.1"
   },
   "devDependencies": {
-    "mocha": "~2.3.3"
+    "mocha": "~2.3.3",
+    "mysql": "^2.9.0"
   }
 }
