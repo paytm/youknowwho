@@ -66,6 +66,7 @@ var
 
 
 UTIL.inherits(YKW, EVENTEMITTER);
+
 function YKW(config, opts) {
 
     var self = this;
@@ -324,7 +325,8 @@ YKW.prototype.applyRules = function(msg, tag) {
 
                 op              = eachCondition.operation,
 
-                cDecision       = self.__checkOperation(op, msgValue, condValue);
+            cDecision       = self.__checkOperation(op, msgValue, condValue);
+
 
             self.emit("log.debug", "Checking condition : " + JSON.stringify(eachCondition) + " " + cDecision);
 
@@ -355,7 +357,8 @@ YKW.prototype.applyRules = function(msg, tag) {
 
         /* 
             Actions in Rule .. Check if they can be applied ... 
-        */
+         */
+
         if (eachRule.conditionsOperator != R_OPERATORS.AND && eachRule.conditionsOperator != R_OPERATORS.OR) {
             //_.template(' <%= c[0] %> && <%= c[1] %> || <%= c[2] %> && <%= c[3] %>')
             finalDecision = eval(eachRule.conditionsOperator({'c': compiledObj }));
@@ -431,7 +434,8 @@ YKW.prototype.__toCompiledString = function(refVal) {
 /*
     converts 2015-06-23 15:00:00 ~ 2015-06-23 16:00:00
     type string to an array of MOMENTs
-*/
+ */
+
 YKW.prototype.__toDateTimeMomentArray = function(refVal) {
     if (typeof refVal !== 'string') return refVal;
 
@@ -793,7 +797,7 @@ YKW.prototype.loadRules = function(r) {
 
        self.emit("log.info", "Loaded Rules : " + self.loadedRules.length);
        self.emit("log.debug", "Loaded Rules : " + JSON.stringify(self.loadedRules));
-  
+
 
 
 };

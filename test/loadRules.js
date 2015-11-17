@@ -64,8 +64,11 @@ connection.query(options, function (error, rows, fields) {
   var message = {
     catalogProductID : 1,
     userData : {
-      recharge_number : 8860035989
-    }
+      // recharge_number : 8860035989
+    },
+      productInfo : {
+	  circle : "Haryana"
+      }
   };
 
   ykw.applyRules(message);
