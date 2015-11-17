@@ -25,13 +25,12 @@ var
     /* Global Variables */
 
     R_OPERATORS         = {
-        AND     : "&&",
-        OR      : "||"
+        AND                     : "&&",
+        OR                      : "||"
     },
 
     R_ACTIONS           = {
         RE_EXIT                 : "RE_EXIT",
-        RE_INIT                 : "RE_INIT",
         SET_VARIABLE            : "SET_VARIABLE"
     },
 
@@ -51,17 +50,14 @@ var
         'DT_RANGE'              : 'datetimerange',
         'NOT_DT_RANGE'          : '!datetimerange',
 
-        'T_RANGE'              : 'timerange',
-        'NOT_T_RANGE'          : '!timerange',
+        'T_RANGE'               : 'timerange',
+        'NOT_T_RANGE'           : '!timerange',
 
-        'REGEX'              : 'regex',
-        'NOT_REGEX'          : '!regex',
+        'REGEX'                 : 'regex',
+        'NOT_REGEX'             : '!regex',
 
-        'ERRORCODETAG'              : 'errorcodetag',
-        'NOT_ERRORCODETAG'          : '!errorcodetag',
-
-        'STRINGRANGE'              : 'stringrange',
-        'NOT_STRINGRANGE'          : '!stringrange'
+        'STRINGRANGE'           : 'stringrange',
+        'NOT_STRINGRANGE'       : '!stringrange'
     };
 
 
@@ -92,7 +88,7 @@ YKW.prototype.__checkDateTimeRange = function(momentArray, msgVal) {
     // Check lesser value of range
     msgVal = MOMENT(msgVal);
     var lesser = momentArray[0];
-    if(lesser !== null && msgVal - lesser < 0)  return false;
+    if(lesser !== null && msgVal - lesser < 0)      return false;
 
     // Check greater value of range
     var greater = momentArray[1];
@@ -121,11 +117,6 @@ YKW.prototype.__checkTimeRange = function(momentArray, msgVal) {
     return true;
 };
 
-/* Check in Error Code range */
-YKW.prototype.__checkErrorCodeTag = function(ErrorCodeArray, msgVal) {
-    return (ErrorCodeArray.indexOf(VALIDATOR.toString(msgVal)) > -1);
-};
-
 /* Check if value matches regext */
 YKW.prototype.__checkRegex = function(regexVal, msgVal) {
     if (typeof(regexVal) === 'string')
@@ -136,7 +127,10 @@ YKW.prototype.__checkRegex = function(regexVal, msgVal) {
 
 /* Check is in the string array provided */
 YKW.prototype.__checkStringRange = function(rangeArray, msgVal) {
-    return (rangeArray.indexOf(VALIDATOR.toString(msgVal).toLowerCase()) > -1)||(rangeArray.indexOf(VALIDATOR.toString(msgVal).toUpperCase()) > -1);
+    return (
+        (rangeArray.indexOf(VALIDATOR.toString(msgVal).toLowerCase()) > -1) || 
+        (rangeArray.indexOf(VALIDATOR.toString(msgVal).toUpperCase()) > -1)
+    );
 };
 
 YKW.prototype.__checkOperation = function(operation, msgVal, cVal) {
@@ -146,11 +140,6 @@ YKW.prototype.__checkOperation = function(operation, msgVal, cVal) {
 
         msgVal  : Value from message
         cVal    : Value from condition
-
-        =
-        !=
-        range
-        !range
     */
 
     var
@@ -255,18 +244,6 @@ YKW.prototype.__checkOperation = function(operation, msgVal, cVal) {
             break;
         }
 
-        // Check in Error Code tag
-        case R_COND_OPS.ERRORCODETAG : {
-            result = self.__checkErrorCodeTag(cVal, msgVal);
-            break;
-        }
-
-        // not in Error Code tag
-        case R_COND_OPS.NOT_ERRORCODETAG : {
-            result = !(self.__checkErrorCodeTag(cVal, msgVal));
-            break;
-        }
-
 
     } // Switch
 
@@ -294,7 +271,8 @@ YKW.prototype.applyRules = function(msg, tag) {
     if(tag)     listofActiveRules = self.tagsRuleMap[tag];
     else        listofActiveRules = self.loadedRules;
 
-    self.emit("log.debug", "apply rules : " + JSON.stringify(msg));
+    self.emit("log.debug", "STEP 1", "Initial message", msg);
+
     // In case no rules are found
     if(!UTIL.isArray(listofActiveRules)) listofActiveRules = [];
 
@@ -328,7 +306,7 @@ YKW.prototype.applyRules = function(msg, tag) {
             cDecision       = self.__checkOperation(op, msgValue, condValue);
 
 
-            self.emit("log.debug", "Checking condition : " + JSON.stringify(eachCondition) + " " + cDecision);
+            self.emit("log.debug", "STEP 2", "Checking condition", eachCondition, cDecision);
 
             /* This is for Rule Trails , mostly for Debug */
             // msg.logs += UTIL.format('C:%s:%s:%s ', eachRule.id, iCondition, (cDecision ? 'T' : 'F')); 
@@ -353,14 +331,14 @@ YKW.prototype.applyRules = function(msg, tag) {
 
         } // Each condition is a rule
 
-        self.emit("log.debug", " Final decision: " + finalDecision);
+        self.emit("log.debug", "STEP 3", "Final decision", finalDecision);
 
         /* 
             Actions in Rule .. Check if they can be applied ... 
          */
 
         if (eachRule.conditionsOperator != R_OPERATORS.AND && eachRule.conditionsOperator != R_OPERATORS.OR) {
-            //_.template(' <%= c[0] %> && <%= c[1] %> || <%= c[2] %> && <%= c[3] %>')
+            // Example : _.template(' <%= c[0] %> && <%= c[1] %> || <%= c[2] %> && <%= c[3] %>')
             finalDecision = eval(eachRule.conditionsOperator({'c': compiledObj }));
         }
 
@@ -370,7 +348,7 @@ YKW.prototype.applyRules = function(msg, tag) {
         for(var iAction = 0; iAction < eachRule.actions.length; iAction ++) {
 
             /* This is for Rule Trails , mostly for Debug */
-            self.emit("log.debug", UTIL.format('A:%s:%s ', eachRule.id, iAction));
+            self.emit("log.debug", "STEP 4", UTIL.format('A:%s:%s ', eachRule.id, iAction));
             
             self._applyAction(msg, eachRule.actions[iAction], eachRule);
         }
@@ -390,10 +368,9 @@ YKW.prototype.applyRules = function(msg, tag) {
 
         We have checked every rule against this message and have moved on
         to applying actions here.
-        Now routing logic should just move this message ahead
     */
 
-    self.emit("log.debug",  "APPLY RULES .. "  + JSON.stringify(msg));
+    self.emit("log.debug", "STEP 5", "After rules are applied", msg);
 
     return msg;
 };
@@ -478,35 +455,6 @@ YKW.prototype.__compileRegex = function(refVal) {
 
 
 /*
-    converts gateway ~ errorcodetag
-    type string to an array of error code values
-*/
-YKW.prototype.__toErrorCodeArray = function(refVal) {
-    if (typeof refVal !== 'string') return refVal;
-
-    var
-        self = this,
-
-        // split from ~ , first value of array is gateway  and second is errorcodetag
-        arr = refVal.split('~'),
-
-        // First part is gateway whose erroro codes we want
-        gw = arr[0].trim(),
-
-        // Second part is error code tag
-        // converting to upper case as the error code has been normalised with all tags in upper case
-        ect = arr[1].trim().toUpperCase();
-
-    /*
-        BugFix: 
-        Lodash works even when there is a space in objects
-        This is to prevent an error if some errorcode tag is not available for a gateway
-    */
-    var errorCodeArray=  _.cloneDeep(Object.keys(_.get(self,'ecGwMapped.' + gw + '.' + ect, [])));
-    return errorCodeArray;
-};
-
-/*
     for compiling and storing string array
 */
 YKW.prototype.__toStringRange = function(refVal) {
@@ -532,27 +480,6 @@ YKW.prototype._applyAction = function(msg, action, rule) {
         // Quit rule engine and do not test anymore rules
         case R_ACTIONS.RE_EXIT : {
             msg[R_ACTIONS.RE_EXIT] = true;
-            break;
-        }
-        //reinitialise keys
-        case R_ACTIONS.RE_INIT : {
-            //the following checks are necessary for reinitiating a transaction
-            //dbUpdateID being null the msg is treated as a new transaction and hence a new entry is created in db for it
-            //rechargeAttempt count is incremented everytime we reinit any transaction
-            msg.dbUpdateID = null;
-            msg.rechargeAttempt = _.parseInt(msg.rechargeAttempt) + 1;//incrementing recharge attempt count
-            break;
-        }
-
-        // Defer Transaction ( Put in DB )
-        case R_ACTIONS.DEFER_TXN : {
-            self.__applyActionDeferTxn(msg, action, rule);
-            break;
-        }
-
-        // Initiate StatusCheck
-        case R_ACTIONS.INITIATE_STATUSCHECK : {
-            self.__applyActionInitiateSc(msg, action, rule);
             break;
         }
 
@@ -615,12 +542,6 @@ YKW.prototype._parseRuleCondition = function(condition) {
         ].indexOf(condition.operation) > -1)
             condition.value = self.__compileRegex(condition.value);
 
-    // If condition has Error Code Tag in operation , then lets parse it and keep it
-    else if([
-            R_COND_OPS.ERRORCODETAG,
-            R_COND_OPS.NOT_ERRORCODETAG
-        ].indexOf(condition.operation) > -1)
-            condition.value = self.__toErrorCodeArray(condition.value);
     // If condition has String Array check in operation , then lets parse it and keep it
     else if([
             R_COND_OPS.STRINGRANGE,
@@ -691,114 +612,111 @@ YKW.prototype.loadRules = function(r) {
               }
         }
     */
-        rule_map    = {},
+        rule_map    = {};
 
-        count   = r.length;
-      
-        r.forEach(function (item) {
-            /* HAck : to parse the value as true/false boolean
-                We check value in condition and action,
-                and if we encounter true/ false , we parse it to BOOLEAN
-                Not neat, maybe we will change in future and put data type
-            */
 
-            // Rule already exists, just put some more valus in it
-            if (rule_map[item.rule.id]) {
-
-                // get Rule
-                var row_found = rule_map[item.rule.id];
-                
-                // see if rule condition has already been there
-                if (!rule_condition_map[row_found.id][item.rule_condition.id]) {
-                    
-                    item.rule_condition = self._parseRuleCondition(item.rule_condition);
-                    row_found.conditions.push(item.rule_condition);
-
-                    rule_condition_map[row_found.id][item.rule_condition.id] = true;
-                }
-
-                // see if action is already there
-                if (!rule_action_map[row_found.id][item.rule_action.id]) {
-
-                    item.rule_action = self._parseRuleAction(item.rule_action);
-                    row_found.actions.push(item.rule_action);
-
-                    rule_action_map[row_found.id][item.rule_action.id] = true;
-                }
-            }
-
-            // Create new Rule
-            else {
-                var row_new = item.rule;
-
-                // set tags
-                var tags = _.get(item[''], 'tags', null);
-                row_new.tags = (tags) ? tags.split(',') : [];
-
-                // set conditions
-                item.rule_condition = self._parseRuleCondition(item.rule_condition);
-                row_new.conditions = [ item.rule_condition];
-
-                // set actions
-                item.rule_action = self._parseRuleAction(item.rule_action);
-                row_new.actions    = [ item.rule_action ];
-
-                // setting condition to avoid stuff : this is join
-                rule_condition_map[row_new.id] = {};
-                rule_condition_map[row_new.id][item.rule_condition.id] = true;
-                
-                // setting action to avoid stuff : this is join
-                rule_action_map[row_new.id] = {};
-                rule_action_map[row_new.id][item.rule_action.id] = true;
-
-                //create a template in case its a complex rule
-                if (row_new.conditionsOperator != R_OPERATORS.AND && row_new.conditionsOperator != R_OPERATORS.OR) {
-                    row_new.conditionsOperator = _.template(row_new.conditionsOperator);
-                }
-
-                // Final Rule Map
-                rule_map[item.rule.id] = row_new;
-
-            }
-        });
-
-        // Get a List of Rules , then we will sort it
-        Object.keys(rule_map).forEach(function (rule_id) {
-
-            // Push the Rule to a list
-            result.push(rule_map[rule_id]);
-        });
-
-        /* Sort Resultant Rules by priority */
-        result = _.sortBy(result, 'priority');
-
-        /* Assign the rules to loaded rules */
-        self.loadedRules = result;
-        /*
-            Push the Rules to a Tag List Map so that
-            we can access rules based on tags
-
-            NOTE : This is done after sorting so that tagged rules are also priority based
+    r.forEach(function (item) {
+        /* HAck : to parse the value as true/false boolean
+            We check value in condition and action,
+            and if we encounter true/ false , we parse it to BOOLEAN
+            Not neat, maybe we will change in future and put data type
         */
-        self.tagsRuleMap = {};
 
-        for(var irule = 0 ; irule < self.loadedRules.length; irule++) {
+        // Rule already exists, just put some more valus in it
+        if (rule_map[item.rule.id]) {
 
-            // go through tags of each rule .. and create buckets
-            for(var jtag = 0; jtag < self.loadedRules[irule].tags.length; jtag ++) {
-                var tag = self.loadedRules[irule].tags[jtag];
+            // get Rule
+            var row_found = rule_map[item.rule.id];
+            
+            // see if rule condition has already been there
+            if (!rule_condition_map[row_found.id][item.rule_condition.id]) {
+                
+                item.rule_condition = self._parseRuleCondition(item.rule_condition);
+                row_found.conditions.push(item.rule_condition);
 
-                // if this tag does not exist, create it
-                if(!self.tagsRuleMap[tag]) self.tagsRuleMap[tag] = [];
+                rule_condition_map[row_found.id][item.rule_condition.id] = true;
+            }
 
-                self.tagsRuleMap[tag].push(self.loadedRules[irule]);
-            }   
+            // see if action is already there
+            if (!rule_action_map[row_found.id][item.rule_action.id]) {
+
+                item.rule_action = self._parseRuleAction(item.rule_action);
+                row_found.actions.push(item.rule_action);
+
+                rule_action_map[row_found.id][item.rule_action.id] = true;
+            }
         }
 
-       self.emit("log.info", "Loaded Rules : " + self.loadedRules.length);
-       self.emit("log.debug", "Loaded Rules : " + JSON.stringify(self.loadedRules));
+        // Create new Rule
+        else {
+            var row_new = item.rule;
 
+            // set tags
+            var tags = _.get(item[''], 'tags', null);
+            row_new.tags = (tags) ? tags.split(',') : [];
 
+            // set conditions
+            item.rule_condition = self._parseRuleCondition(item.rule_condition);
+            row_new.conditions = [ item.rule_condition];
+
+            // set actions
+            item.rule_action = self._parseRuleAction(item.rule_action);
+            row_new.actions    = [ item.rule_action ];
+
+            // setting condition to avoid stuff : this is join
+            rule_condition_map[row_new.id] = {};
+            rule_condition_map[row_new.id][item.rule_condition.id] = true;
+            
+            // setting action to avoid stuff : this is join
+            rule_action_map[row_new.id] = {};
+            rule_action_map[row_new.id][item.rule_action.id] = true;
+
+            //create a template in case its a complex rule
+            if (row_new.conditionsOperator != R_OPERATORS.AND && row_new.conditionsOperator != R_OPERATORS.OR) {
+                row_new.conditionsOperator = _.template(row_new.conditionsOperator);
+            }
+
+            // Final Rule Map
+            rule_map[item.rule.id] = row_new;
+
+        }
+    });
+
+    // Get a List of Rules , then we will sort it
+    Object.keys(rule_map).forEach(function (rule_id) {
+
+        // Push the Rule to a list
+        result.push(rule_map[rule_id]);
+    });
+
+    /* Sort Resultant Rules by priority */
+    result = _.sortBy(result, 'priority');
+
+    /* Assign the rules to loaded rules */
+    self.loadedRules = result;
+    /*
+        Push the Rules to a Tag List Map so that
+        we can access rules based on tags
+
+        NOTE : This is done after sorting so that tagged rules are also priority based
+    */
+    self.tagsRuleMap = {};
+
+    for(var irule = 0 ; irule < self.loadedRules.length; irule++) {
+
+        // go through tags of each rule .. and create buckets
+        for(var jtag = 0; jtag < self.loadedRules[irule].tags.length; jtag ++) {
+            var tag = self.loadedRules[irule].tags[jtag];
+
+            // if this tag does not exist, create it
+            if(!self.tagsRuleMap[tag]) self.tagsRuleMap[tag] = [];
+
+            self.tagsRuleMap[tag].push(self.loadedRules[irule]);
+        }   
+    }
+
+    self.emit("log.info", "Loaded Rules : " + self.loadedRules.length);
+    self.emit("log.debug", "Loaded Rules : " + JSON.stringify(self.loadedRules));
 
 };
 
