@@ -31,7 +31,12 @@ var
 
     R_ACTIONS           = {
         RE_EXIT                 : "RE_EXIT",
-        SET_VARIABLE            : "SET_VARIABLE"
+        SET_VARIABLE            : "SET_VARIABLE",
+        DANGEROUS_EVAL          : "DANGEROUS_EVAL"
+    },
+
+    R_CONDITIONS        = {
+        CHECK_VARIABLE          : "CHECK_VARIABLE",
     },
 
     R_COND_OPS          = {
@@ -483,6 +488,13 @@ YKW.prototype._applyAction = function(msg, action, rule) {
             break;
         }
 
+        // eval the expression
+        case R_ACTIONS.DANGEROUS_EVAL : {
+            self.__applyActionSetVariable(msg, action, rule);
+            break;
+        }
+        
+
     }
 
 };
@@ -502,6 +514,19 @@ YKW.prototype.__applyActionSetVariable = function(msg, action) {
     // Value can be a compiled function or a direct value
     if(typeof actVal === "function")    _.set(msg,  actKey, actVal(msg));
     else    _.set(msg,  actKey, actVal);
+
+};
+
+/*
+   Apply Action DANGEROUS_EVAL
+*/
+YKW.prototype.__applyActionDangerousEval = function(msg, action) {
+    var
+        // key, value
+        actKey          = action.key;
+
+    // JSHINT for eval
+    _.set(msg,  actKey, eval(_.get(msg,  actKey, '')));
 
 };
 

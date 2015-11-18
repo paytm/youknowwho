@@ -68,12 +68,18 @@ Each Action will have 3 parts
 1.  **Action** : Possible options are 
 > + **Set Variable** ==> Sets a variable in the source message
 > + **Stop Processing more rules** ==> Stop Processing more rule/action after this action
+> + **DANGEROUS_EVAL** ==> This will 'eval' the key and overwrite it.
 > + **Custom blocking Sync function** ( ToDo )
 > + **Custom blocking Async Function** ( ToDo )
 > + **Custom non blocking async Function** ( ToDo )
 
 2. **Key** : For Set variable or according to action
-3. **Value** : For set variable or according to action
+3. **Value** : For set variable or according to action. See Rule Action Value for options
+
+# Rule Action Value
+- **boolean** ==> "true" or "false" will be converted to boolean TRUE/FALSE
+- **template string** ==> Specify string in lodash format "<="" and it will be treated as a lodash template. The variables in the template are picked from message.
+- **normal string** : any string other than above two will be treated as a normal string.
 
 
 # Custom Function in Condition and Actions ( ToDo )
