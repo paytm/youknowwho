@@ -62,7 +62,10 @@ var
         'NOT_REGEX'             : '!regex',
 
         'STRINGRANGE'           : 'stringrange',
-        'NOT_STRINGRANGE'       : '!stringrange'
+        'NOT_STRINGRANGE'       : '!stringrange',
+
+        'IS_OF_SET'             : 'set',
+        'IS_NOT_OF_SET'         :  '!set'
     };
 
 
@@ -246,6 +249,17 @@ YKW.prototype.__checkOperation = function(operation, msgVal, cVal) {
         // not string match
         case R_COND_OPS.NOT_STRINGRANGE : {
             result = !(self.__checkStringRange(cVal, msgVal));
+            break;
+        }
+
+
+        case R_COND_OPS.IS_OF_SET : {
+            result = _.intersection(cVal, msgVal).length ? true : false;
+            break;
+        }
+
+        case R_COND_OPS.IS_NOT_OF_SET : {
+            result = _.intersection(cVal, msgVal).length === 0 ? true : false;
             break;
         }
 
