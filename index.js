@@ -254,12 +254,12 @@ YKW.prototype.__checkOperation = function(operation, msgVal, cVal) {
 
 
         case R_COND_OPS.IS_OF_SET : {
-            result = _.intersection(cVal, msgVal).length ? true : false;
+            result = _.intersection(cVal.split(','), msgVal.split(',')).length ? true : false;
             break;
         }
 
         case R_COND_OPS.IS_NOT_OF_SET : {
-            result = _.intersection(cVal, msgVal).length === 0 ? true : false;
+            result = _.intersection(cVal.split(','), msgVal.split(',')).length === 0 ? true : false;
             break;
         }
 
