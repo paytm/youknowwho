@@ -300,7 +300,9 @@ YKW.prototype.applyRules = function(msg, tag) {
 
         var
             eachRule            = listofActiveRules[iRule],
-            finalDecision       = true,
+            finalDecision       = null,
+            finalDecisionAnd    = true,
+            finalDecisionOr     = false,
             compiledObj         = {};
 
         // self.emit("log.info", "CHECKING RULE : " + eachRule);
@@ -322,7 +324,7 @@ YKW.prototype.applyRules = function(msg, tag) {
 
                 op              = eachCondition.operation,
 
-            cDecision       = self.__checkOperation(op, msgValue, condValue);
+                cDecision       = self.__checkOperation(op, msgValue, condValue);
 
 
             self.emit("log.debug", "STEP 2", "Checking condition", eachCondition, cDecision);
@@ -334,17 +336,28 @@ YKW.prototype.applyRules = function(msg, tag) {
 
             // see conditions operator and decide what final decision is
             if(eachRule.conditionsOperator == R_OPERATORS.AND) {
-                finalDecision = finalDecision && cDecision;
+
+                finalDecisionAnd = finalDecisionAnd && cDecision;
 
                 // Even if 1 condition is not met here, no point in continuing
-                if(finalDecision === false) break;
+                if (finalDecisionAnd === false) {
+                    finalDecision = false;
+                    break;
+                } else {
+                    finalDecision = true;
+                }
             }
             else if(eachRule.conditionsOperator == R_OPERATORS.OR) {
 
-                finalDecision = finalDecision || cDecision;
+                finalDecisionOr = finalDecisionOr || cDecision;
 
                 // Even if 1 condition is met here, Lets continue
-                if(finalDecision === true) break;
+                if (finalDecisionOr === true) {
+                    finalDecision = true;
+                    break;
+                } else {
+                    finalDecision = false;
+                }
             }
             else {
                 //for handling complex functions
