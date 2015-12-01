@@ -36,7 +36,7 @@ var
     },
 
     R_CONDITIONS        = {
-        CHECK_VARIABLE          : "CHECK_VARIABLE",
+        CHECK_VARIABLE          : "CHECK_VARIABLE"
     },
 
     R_COND_OPS          = {
@@ -139,6 +139,25 @@ YKW.prototype.__checkStringRange = function(rangeArray, msgVal) {
         (rangeArray.indexOf(VALIDATOR.toString(msgVal).toLowerCase()) > -1) || 
         (rangeArray.indexOf(VALIDATOR.toString(msgVal).toUpperCase()) > -1)
     );
+};
+
+YKW.prototype.__checkIsSet = function (cVal, msgVal) {
+    if (!msgVal) {
+	return false;
+    }
+
+    cVal = cVal.split(',');
+
+    msgVal = msgVal.split(',');
+
+    var intersection_set = _.intersection(cVal, msgVal);
+
+    if (intersection_set.length > 0) {
+        return true;
+    } else {
+        return false;
+    }
+
 };
 
 YKW.prototype.__checkOperation = function(operation, msgVal, cVal) {
@@ -254,12 +273,12 @@ YKW.prototype.__checkOperation = function(operation, msgVal, cVal) {
 
 
         case R_COND_OPS.IS_OF_SET : {
-            result = _.intersection(cVal.split(','), msgVal.split(',')).length ? true : false;
+            result = self.__checkIsSet(cVal, msgVal);
             break;
         }
 
         case R_COND_OPS.IS_NOT_OF_SET : {
-            result = _.intersection(cVal.split(','), msgVal.split(',')).length === 0 ? true : false;
+            result = !(self.__checkIsSet(cVal, msgVal));
             break;
         }
 
