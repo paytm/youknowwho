@@ -146,6 +146,14 @@ YKW.prototype.__checkIsSet = function (cVal, msgVal) {
 	return false;
     }
 
+    if (typeof cVal !== 'string') {
+        cVal = cVal.toString();
+    }
+
+    if (typeof msgVal !== 'string') {
+        msgVal = msgVal.toString();
+    }
+
     cVal = cVal.split(',');
 
     msgVal = msgVal.split(',');
