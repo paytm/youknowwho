@@ -62,7 +62,10 @@ var
         'NOT_REGEX'             : '!regex',
 
         'STRINGRANGE'           : 'stringrange',
-        'NOT_STRINGRANGE'       : '!stringrange'
+        'NOT_STRINGRANGE'       : '!stringrange',
+
+        'IS_OF_SET'             : 'set',
+        'IS_NOT_OF_SET'         :  '!set'
     };
 
 
@@ -250,6 +253,17 @@ YKW.prototype.__checkOperation = function(operation, msgVal, cVal) {
         }
 
 
+        case R_COND_OPS.IS_OF_SET : {
+            result = _.intersection(cVal.split(','), msgVal.split(',')).length ? true : false;
+            break;
+        }
+
+        case R_COND_OPS.IS_NOT_OF_SET : {
+            result = _.intersection(cVal.split(','), msgVal.split(',')).length === 0 ? true : false;
+            break;
+        }
+
+
     } // Switch
 
     return result;
@@ -313,6 +327,8 @@ YKW.prototype.applyRules = function(msg, tag) {
 
             self.emit("log.debug", "STEP 2", "Checking condition", eachCondition, cDecision);
 
+            self.emit("log.simulate.condition", eachRule, eachCondition, cDecision);
+
             /* This is for Rule Trails , mostly for Debug */
             // msg.logs += UTIL.format('C:%s:%s:%s ', eachRule.id, iCondition, (cDecision ? 'T' : 'F')); 
 
@@ -324,6 +340,7 @@ YKW.prototype.applyRules = function(msg, tag) {
                 if(finalDecision === false) break;
             }
             else if(eachRule.conditionsOperator == R_OPERATORS.OR) {
+
                 finalDecision = finalDecision || cDecision;
 
                 // Even if 1 condition is met here, Lets continue
@@ -354,7 +371,7 @@ YKW.prototype.applyRules = function(msg, tag) {
 
             /* This is for Rule Trails , mostly for Debug */
             self.emit("log.debug", "STEP 4", UTIL.format('A:%s:%s ', eachRule.id, iAction));
-            
+            self.emit("log.simulate.action", eachRule, finalDecision, eachRule.actions[iAction]);
             self._applyAction(msg, eachRule.actions[iAction], eachRule);
         }
 
