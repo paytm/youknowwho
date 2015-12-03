@@ -36,7 +36,7 @@ var
     },
 
     R_CONDITIONS        = {
-        CHECK_VARIABLE          : "CHECK_VARIABLE",
+        CHECK_VARIABLE          : "CHECK_VARIABLE"
     },
 
     R_COND_OPS          = {
@@ -139,6 +139,33 @@ YKW.prototype.__checkStringRange = function(rangeArray, msgVal) {
         (rangeArray.indexOf(VALIDATOR.toString(msgVal).toLowerCase()) > -1) || 
         (rangeArray.indexOf(VALIDATOR.toString(msgVal).toUpperCase()) > -1)
     );
+};
+
+YKW.prototype.__checkIsSet = function (cVal, msgVal) {
+    if (!msgVal) {
+	return false;
+    }
+
+    if (typeof cVal !== 'string') {
+        cVal = cVal.toString();
+    }
+
+    if (typeof msgVal !== 'string') {
+        msgVal = msgVal.toString();
+    }
+
+    cVal = cVal.split(',');
+
+    msgVal = msgVal.split(',');
+
+    var intersection_set = _.intersection(cVal, msgVal);
+
+    if (intersection_set.length > 0) {
+        return true;
+    } else {
+        return false;
+    }
+
 };
 
 YKW.prototype.__checkOperation = function(operation, msgVal, cVal) {
@@ -254,12 +281,12 @@ YKW.prototype.__checkOperation = function(operation, msgVal, cVal) {
 
 
         case R_COND_OPS.IS_OF_SET : {
-            result = _.intersection(cVal.split(','), msgVal.split(',')).length ? true : false;
+            result = self.__checkIsSet(cVal, msgVal);
             break;
         }
 
         case R_COND_OPS.IS_NOT_OF_SET : {
-            result = _.intersection(cVal.split(','), msgVal.split(',')).length === 0 ? true : false;
+            result = !(self.__checkIsSet(cVal, msgVal));
             break;
         }
 
@@ -300,7 +327,16 @@ YKW.prototype.applyRules = function(msg, tag) {
 
         var
             eachRule            = listofActiveRules[iRule],
-            finalDecision       = true,
+
+            /*
+                finalDecision : null
+
+                For 1st codition we are setting finaldecision = Output of the condition
+                For other conditions --> If conditional operator is && or || , Lets apply the condition with finaldecision normally
+
+                IFF no Condition , then we check finaldecision for null also
+            */
+            finalDecision       = null,
             compiledObj         = {};
 
         // self.emit("log.info", "CHECKING RULE : " + eachRule);
@@ -322,7 +358,7 @@ YKW.prototype.applyRules = function(msg, tag) {
 
                 op              = eachCondition.operation,
 
-            cDecision       = self.__checkOperation(op, msgValue, condValue);
+                cDecision       = self.__checkOperation(op, msgValue, condValue);
 
 
             self.emit("log.debug", "STEP 2", "Checking condition", eachCondition, cDecision);
@@ -332,24 +368,23 @@ YKW.prototype.applyRules = function(msg, tag) {
             /* This is for Rule Trails , mostly for Debug */
             // msg.logs += UTIL.format('C:%s:%s:%s ', eachRule.id, iCondition, (cDecision ? 'T' : 'F')); 
 
-            // see conditions operator and decide what final decision is
-            if(eachRule.conditionsOperator == R_OPERATORS.AND) {
-                finalDecision = finalDecision && cDecision;
 
-                // Even if 1 condition is not met here, no point in continuing
-                if(finalDecision === false) break;
-            }
-            else if(eachRule.conditionsOperator == R_OPERATORS.OR) {
-
-                finalDecision = finalDecision || cDecision;
-
-                // Even if 1 condition is met here, Lets continue
-                if(finalDecision === true) break;
-            }
+            /* Check if 1st condition */
+            if(iCondition === 0)    finalDecision = cDecision;
             else {
-                //for handling complex functions
-                _.set(compiledObj,iCondition,cDecision);
-             }
+
+                // see conditions operator and decide what final decision is
+                if(eachRule.conditionsOperator == R_OPERATORS.AND) {
+                    finalDecision = finalDecision && cDecision;
+                }
+                else if(eachRule.conditionsOperator == R_OPERATORS.OR) {
+                    finalDecision = finalDecision || cDecision;
+                }
+                else { //for handling complex functions
+                    _.set(compiledObj,iCondition,cDecision);
+                }
+            }
+
 
         } // Each condition is a rule
 
@@ -364,7 +399,12 @@ YKW.prototype.applyRules = function(msg, tag) {
             finalDecision = eval(eachRule.conditionsOperator({'c': compiledObj }));
         }
 
-        if(!finalDecision) continue;
+        /*
+            When do we apply actions ?
+                If finaldecision is TRUE
+                or NULL --> Why ? That mean no condition was there , hence we always apply that Rule
+        */
+        if(finalDecision === false) continue;
 
         // Apply each action for that rule
         for(var iAction = 0; iAction < eachRule.actions.length; iAction ++) {
