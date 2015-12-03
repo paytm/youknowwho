@@ -36,7 +36,7 @@ var
     },
 
     R_CONDITIONS        = {
-        CHECK_VARIABLE          : "CHECK_VARIABLE",
+        CHECK_VARIABLE          : "CHECK_VARIABLE"
     },
 
     R_COND_OPS          = {
@@ -139,6 +139,33 @@ YKW.prototype.__checkStringRange = function(rangeArray, msgVal) {
         (rangeArray.indexOf(VALIDATOR.toString(msgVal).toLowerCase()) > -1) || 
         (rangeArray.indexOf(VALIDATOR.toString(msgVal).toUpperCase()) > -1)
     );
+};
+
+YKW.prototype.__checkIsSet = function (cVal, msgVal) {
+    if (!msgVal) {
+	return false;
+    }
+
+    if (typeof cVal !== 'string') {
+        cVal = cVal.toString();
+    }
+
+    if (typeof msgVal !== 'string') {
+        msgVal = msgVal.toString();
+    }
+
+    cVal = cVal.split(',');
+
+    msgVal = msgVal.split(',');
+
+    var intersection_set = _.intersection(cVal, msgVal);
+
+    if (intersection_set.length > 0) {
+        return true;
+    } else {
+        return false;
+    }
+
 };
 
 YKW.prototype.__checkOperation = function(operation, msgVal, cVal) {
@@ -254,12 +281,12 @@ YKW.prototype.__checkOperation = function(operation, msgVal, cVal) {
 
 
         case R_COND_OPS.IS_OF_SET : {
-            result = _.intersection(cVal.split(','), msgVal.split(',')).length ? true : false;
+            result = self.__checkIsSet(cVal, msgVal);
             break;
         }
 
         case R_COND_OPS.IS_NOT_OF_SET : {
-            result = _.intersection(cVal.split(','), msgVal.split(',')).length === 0 ? true : false;
+            result = !(self.__checkIsSet(cVal, msgVal));
             break;
         }
 
@@ -300,7 +327,9 @@ YKW.prototype.applyRules = function(msg, tag) {
 
         var
             eachRule            = listofActiveRules[iRule],
-            finalDecision       = true,
+            finalDecision       = null,
+            finalDecisionAnd    = true,
+            finalDecisionOr     = false,
             compiledObj         = {};
 
         // self.emit("log.info", "CHECKING RULE : " + eachRule);
@@ -322,7 +351,7 @@ YKW.prototype.applyRules = function(msg, tag) {
 
                 op              = eachCondition.operation,
 
-            cDecision       = self.__checkOperation(op, msgValue, condValue);
+                cDecision       = self.__checkOperation(op, msgValue, condValue);
 
 
             self.emit("log.debug", "STEP 2", "Checking condition", eachCondition, cDecision);
@@ -334,17 +363,28 @@ YKW.prototype.applyRules = function(msg, tag) {
 
             // see conditions operator and decide what final decision is
             if(eachRule.conditionsOperator == R_OPERATORS.AND) {
-                finalDecision = finalDecision && cDecision;
+
+                finalDecisionAnd = finalDecisionAnd && cDecision;
 
                 // Even if 1 condition is not met here, no point in continuing
-                if(finalDecision === false) break;
+                if (finalDecisionAnd === false) {
+                    finalDecision = false;
+                    break;
+                } else {
+                    finalDecision = true;
+                }
             }
             else if(eachRule.conditionsOperator == R_OPERATORS.OR) {
 
-                finalDecision = finalDecision || cDecision;
+                finalDecisionOr = finalDecisionOr || cDecision;
 
                 // Even if 1 condition is met here, Lets continue
-                if(finalDecision === true) break;
+                if (finalDecisionOr === true) {
+                    finalDecision = true;
+                    break;
+                } else {
+                    finalDecision = false;
+                }
             }
             else {
                 //for handling complex functions
