@@ -507,7 +507,7 @@ YKW.prototype._applyAction = function(msg, action, rule) {
 
         // eval the expression
         case R_ACTIONS.DANGEROUS_EVAL : {
-            self.__applyActionSetVariable(msg, action, rule);
+            self.__applyActionDangerousEval(msg, action, rule);
             break;
         }
         
