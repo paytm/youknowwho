@@ -1,6 +1,6 @@
 {
   "name": "youknowwho",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Rule engine for most of generic decision makings ... Gui will follow soon",
   "main": "index.js",
   "scripts": {
