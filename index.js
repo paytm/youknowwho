@@ -356,10 +356,24 @@ YKW.prototype.applyRules = function(msg, tag) {
                 // Get condition value
                 condValue       = eachCondition.value,
 
-                op              = eachCondition.operation,
+                op              = eachCondition.operation;
 
-                cDecision       = self.__checkOperation(op, msgValue, condValue);
 
+            /*
+             Okay , so condition value can be either a static string or can be a lodash template
+             If it is lodash template, then we evaluate that first to get the static value
+             and afterwards, parse that value to get a usage operatable value ...
+             */
+
+            if (typeof condValue === 'function') {
+                // Get value from lodash template
+                condValue = condValue(msg);
+
+                // Parse the condition into an tiny-range / moment etc object
+                condValue = self._parseCondition(condValue);
+            }
+
+            var cDecision       = self.__checkOperation(op, msgValue, condValue);
 
             self.emit("log.debug", "STEP 2", "Checking condition", eachCondition, cDecision);
 
@@ -595,6 +609,32 @@ YKW.prototype.__applyActionDangerousEval = function(msg, action) {
 YKW.prototype._parseRuleCondition = function(condition) {
 
     var self = this;
+    /*
+     Conditions having "<%=" are presumed to be lodash templates
+     and are used for variable to variable comparison depending upon
+     the input message to the rule engine.
+
+     condition.value is checked since there can be rules without any conditions
+     and  have only actions.
+
+     */
+    if (condition.value && condition.value.indexOf('<%=') > -1) {
+        condition.value = _.template(condition.value);
+    } else {
+        condition = self._parseCondition(condition);
+    }
+
+    return condition;
+};
+
+/*
+ This can be called from _parseRuleCondition
+ or from applyRules where the condition value is a lodash template
+ and we want to parse the condition according to the input message
+ */
+
+YKW.prototype._parseCondition = function (condition) {
+    var self = this;
 
     // If Rule Condition values have true / false, then lets parse it to Boolean
     _.set(condition, "value", self.__toBoolOrNull(_.get(condition , "value", null)));
@@ -605,32 +645,31 @@ YKW.prototype._parseRuleCondition = function(condition) {
 
     // If condition has Datetime in operation , then lets parse it in MOMENT and keep it
     else if([
-            R_COND_OPS.DT_RANGE,
-            R_COND_OPS.NOT_DT_RANGE
-        ].indexOf(condition.operation) > -1)
-            condition.value = self.__toDateTimeMomentArray(condition.value);
-    
+        R_COND_OPS.DT_RANGE,
+        R_COND_OPS.NOT_DT_RANGE
+    ].indexOf(condition.operation) > -1)
+        condition.value = self.__toDateTimeMomentArray(condition.value);
+
     // If condition has time in operation , then lets parse it in MOMENT and keep it
     else if([
-            R_COND_OPS.T_RANGE,
-            R_COND_OPS.NOT_T_RANGE
-        ].indexOf(condition.operation) > -1)
-            condition.value = self.__toTimeMomentArray(condition.value);
-    
+        R_COND_OPS.T_RANGE,
+        R_COND_OPS.NOT_T_RANGE
+    ].indexOf(condition.operation) > -1)
+        condition.value = self.__toTimeMomentArray(condition.value);
+
     // If condition has regex in operation , then lets compile it and keep it
     else if([
-            R_COND_OPS.REGEX,
-            R_COND_OPS.NOT_REGEX
-        ].indexOf(condition.operation) > -1)
-            condition.value = self.__compileRegex(condition.value);
+        R_COND_OPS.REGEX,
+        R_COND_OPS.NOT_REGEX
+    ].indexOf(condition.operation) > -1)
+        condition.value = self.__compileRegex(condition.value);
 
     // If condition has String Array check in operation , then lets parse it and keep it
     else if([
-            R_COND_OPS.STRINGRANGE,
-            R_COND_OPS.NOT_STRINGRANGE
-        ].indexOf(condition.operation) > -1)
-            condition.value = self.__toStringRange(condition.value);
-
+        R_COND_OPS.STRINGRANGE,
+        R_COND_OPS.NOT_STRINGRANGE
+    ].indexOf(condition.operation) > -1)
+        condition.value = self.__toStringRange(condition.value);
     return condition;
 };
 

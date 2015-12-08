@@ -60,6 +60,12 @@ Each condition has 4 parts
 > + E.g. ["a", "b", "c"] 
 > ('stringrange', 'In String Array ( stringrange)'), 
 > ('!stringrange', 'Not In String Array ( !stringrange )'),
+> + E.g. [1, 2, 3]
+> ('set', 'Is a part of the Set (set)'),
+> ('!set', 'Is not a part of the set (!set)'),
+
+The value to the condition can be a static value or something that belongs to the input message of the rule.
+To provide dynamic input values, use the lodash template syntax.
 
 
 # Rule Actions
