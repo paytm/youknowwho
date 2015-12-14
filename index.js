@@ -597,7 +597,9 @@ YKW.prototype.__applyActionDangerousEval = function(msg, action) {
         actKey          = action.key;
 
     // JSHINT for eval
-    _.set(msg,  actKey, eval(_.get(msg,  actKey, '')));
+
+    if (typeof action.value === "function") _.set(msg, actKey, eval(action.value(msg)));
+    else    _.set(msg,  actKey, eval(action.value));
 
 };
 
