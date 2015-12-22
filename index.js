@@ -1,4 +1,4 @@
-/* 
+/*
     Main Rule Engine Object
 */
 
@@ -120,6 +120,26 @@ YKW.prototype.__checkRange = function(rangeArray, val) {
 };
 
 
+/*
+
+ The following functions are enabled so that
+ people can enable and disable debug logs at run time ...
+
+ Useful if you want to give back a
+ response as to what happens in the rule engine .
+
+*/
+
+YKW.prototype.enableDebug = function () {
+    var self = this;
+    self.emitLogs = self.__emitLogs;
+};
+
+YKW.prototype.disableDebug = function () {
+    var self = this;
+    self.emitLogs = self.__dummyEmitLogs;
+};
+
 /* Check Datetime Range */
 YKW.prototype.__checkDateTimeRange = function(momentArray, msgVal) {
     /*
@@ -135,7 +155,7 @@ YKW.prototype.__checkDateTimeRange = function(momentArray, msgVal) {
     // Check greater value of range
     var greater = momentArray[1];
     if(greater !== null && msgVal - greater > 0)    return false;
-    
+
     // All conditions must be met
     return true;
 };
@@ -154,7 +174,7 @@ YKW.prototype.__checkTimeRange = function(momentArray, msgVal) {
     // Check greater value of range
     var greater = MOMENT(momentArray[1],'HH:mm:ss');
     if(greater !== null && msgVal - greater > 0)    return false;
-    
+
     // All conditions must be met
     return true;
 };
@@ -170,7 +190,7 @@ YKW.prototype.__checkRegex = function(regexVal, msgVal) {
 /* Check is in the string array provided */
 YKW.prototype.__checkStringRange = function(rangeArray, msgVal) {
     return (
-        (rangeArray.indexOf(VALIDATOR.toString(msgVal).toLowerCase()) > -1) || 
+        (rangeArray.indexOf(VALIDATOR.toString(msgVal).toLowerCase()) > -1) ||
         (rangeArray.indexOf(VALIDATOR.toString(msgVal).toUpperCase()) > -1)
     );
 };
@@ -203,7 +223,7 @@ YKW.prototype.__checkIsSet = function (cVal, msgVal) {
 };
 
 YKW.prototype.__checkOperation = function(operation, msgVal, cVal) {
-    /* 
+    /*
         Self explanatory operations between lval and rval , returns true/false
         Applies following operations as of now.
 
@@ -332,7 +352,7 @@ YKW.prototype.__checkOperation = function(operation, msgVal, cVal) {
 };
 
 YKW.prototype.applyRules = function(msg, tag) {
-    /* Apply Rules to a message 
+    /* Apply Rules to a message
 
         Phase 1 : We apply rules sequentially .. we are starting with a few rules
 
@@ -414,7 +434,7 @@ YKW.prototype.applyRules = function(msg, tag) {
             self.emit("log.simulate.condition", eachRule, eachCondition, cDecision);
 
             /* This is for Rule Trails , mostly for Debug */
-            // msg.logs += UTIL.format('C:%s:%s:%s ', eachRule.id, iCondition, (cDecision ? 'T' : 'F')); 
+            // msg.logs += UTIL.format('C:%s:%s:%s ', eachRule.id, iCondition, (cDecision ? 'T' : 'F'));
 
 
             /* Check if 1st condition */
@@ -438,8 +458,8 @@ YKW.prototype.applyRules = function(msg, tag) {
 
         self.emit("log.debug", "STEP 3", "Final decision", finalDecision);
 
-        /* 
-            Actions in Rule .. Check if they can be applied ... 
+        /*
+            Actions in Rule .. Check if they can be applied ...
          */
 
         if (eachRule.conditionsOperator != R_OPERATORS.AND && eachRule.conditionsOperator != R_OPERATORS.OR) {
@@ -503,7 +523,7 @@ YKW.prototype.__toBoolOrNull = function(refVal) {
     - Almost all message properties can be used in Action Values as variables
     - The Syntax for variables is <%= userdata.amount %>
     E.g. This is not done. We have <%= userdata.amount %> with us. Your number is<%= userdata.number %> . OKay
-    
+
     - Please note it is a direct replacement function and we use LODASH.template for this.
 
 */
@@ -541,7 +561,7 @@ YKW.prototype.__toDateTimeMomentArray = function(refVal) {
 
 /*
     converts 15:00:00 ~ 16:00:00
-    type string to an array of time 
+    type string to an array of time
 */
 YKW.prototype.__toTimeMomentArray = function(refVal) {
     if (typeof refVal !== 'string') return refVal;
@@ -559,7 +579,7 @@ YKW.prototype.__toTimeMomentArray = function(refVal) {
 */
 YKW.prototype.__compileRegex = function(refVal) {
     if (typeof refVal !== 'string') return refVal;
-    
+
     return new RegExp(refVal);
 };
 
@@ -598,7 +618,7 @@ YKW.prototype._applyAction = function(msg, action, rule) {
             self.__applyActionDangerousEval(msg, action, rule);
             break;
         }
-        
+
 
     }
 
@@ -729,7 +749,7 @@ YKW.prototype._parseRuleAction = function(action) {
 
 /*
     Here We load rules from Database.
-    And keep reloading every 5 minutes or so ... 
+    And keep reloading every 5 minutes or so ...
  */
 
 YKW.prototype.loadRules = function(r) {
@@ -746,7 +766,7 @@ YKW.prototype.loadRules = function(r) {
             }
      */
         rule_condition_map = {},
-    
+
      /*
         rule_action_map keeps a mapping of rule Ids to the action keys already associated to the rule
         Example
@@ -761,7 +781,7 @@ YKW.prototype.loadRules = function(r) {
       rule_map is the mapping of rule_ids to the final object
       Example
        {
-          1 : { 
+          1 : {
                 id         : 1,
                 name       : 'Test',
                 conditions : [],
@@ -784,10 +804,10 @@ YKW.prototype.loadRules = function(r) {
 
             // get Rule
             var row_found = rule_map[item.rule.id];
-            
+
             // see if rule condition has already been there
             if (!rule_condition_map[row_found.id][item.rule_condition.id]) {
-                
+
                 item.rule_condition = self._parseRuleCondition(item.rule_condition);
                 row_found.conditions.push(item.rule_condition);
 
@@ -823,7 +843,7 @@ YKW.prototype.loadRules = function(r) {
             // setting condition to avoid stuff : this is join
             rule_condition_map[row_new.id] = {};
             rule_condition_map[row_new.id][item.rule_condition.id] = true;
-            
+
             // setting action to avoid stuff : this is join
             rule_action_map[row_new.id] = {};
             rule_action_map[row_new.id][item.rule_action.id] = true;
@@ -869,7 +889,7 @@ YKW.prototype.loadRules = function(r) {
             if(!self.tagsRuleMap[tag]) self.tagsRuleMap[tag] = [];
 
             self.tagsRuleMap[tag].push(self.loadedRules[irule]);
-        }   
+        }
     }
 
     self.emit("log.info", "Loaded Rules : " + self.loadedRules.length);
@@ -882,7 +902,7 @@ module.exports = YKW;
 
 
 /*
-    ***************** TESTING ******************** 
+    ***************** TESTING ********************
 
     To test we use webserver. Just run it with -l flag
     and use it for /search url to test
