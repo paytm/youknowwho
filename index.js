@@ -71,11 +71,45 @@ var
 
 UTIL.inherits(YKW, EVENTEMITTER);
 
-function YKW(config, opts) {
+function YKW(opts) {
 
     var self = this;
+
+    self.opts = opts;
+
+    /* If debug is true , we  DO NOT EMIT ... */
+    self.debug = _.get(opts, 'debug', false);
+    if(self.debug === true) self.emitLogs = self.__emitLogs;
+    else self.emitLogs = self.__dummyEmitLogs;
+
     EVENTEMITTER.call(self);
 }
+
+
+
+/*
+    Emit Logs Functions.
+    If Debug is true , we assign the emitLogs function to __emitLogs otherwise to __dummyEmitLogs.
+    Just saving an if condition :D
+*/
+
+
+YKW.prototype.__dummyEmitLogs = function(rangeArray, val) {};
+
+/*
+    Type supposedly like logs.verbose
+    Step : to track steps and which steps to listen to
+    argsArray : Whatever needs to passed in event emitter as info
+*/
+
+YKW.prototype.__emitLogs = function(type, step, argsArray) {
+
+    // To make arg array
+    argsArray.unshift(step);
+    argsArray.unshift(type);
+    this.emit.apply(this, argsArray);
+};
+/* Emit Log Functions */
 
 
 YKW.prototype.__checkRange = function(rangeArray, val) {
@@ -317,7 +351,7 @@ YKW.prototype.applyRules = function(msg, tag) {
     if(tag)     listofActiveRules = self.tagsRuleMap[tag];
     else        listofActiveRules = self.loadedRules;
 
-    self.emit("log.debug", "STEP 1", "Initial message", msg);
+    self.emitLogs("log.debug", 1, [msg]);
 
     // In case no rules are found
     if(!UTIL.isArray(listofActiveRules)) listofActiveRules = [];

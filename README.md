@@ -2,6 +2,10 @@
 Rule engine for most of generic decision makings ... Gui will follow some
 
 
+# Opts to instantiate
+- *debug*         : BOOLEAN . Will start emitting Debug Events. NOTE : Will SLOW DOWN the rule engine since Event Emitter is panifully Slow.
+
+
 # Rules
 - *Id*            : Will be unique identification of a rule
 - *Name*          : Not used anywhere except for Logging
