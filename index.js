@@ -78,6 +78,11 @@ function YKW(opts) {
     self.opts = opts;
 
     /* If debug is true , we  DO NOT EMIT ... */
+
+    // This fact can be changed if the user explicity
+    // calls the enableDebug function ...
+
+    // Need to disable this later.
     self.debug = _.get(opts, 'debug', false);
     if(self.debug === true) self.emitLogs = self.__emitLogs;
     else self.emitLogs = self.__dummyEmitLogs;
@@ -94,7 +99,7 @@ function YKW(opts) {
 */
 
 
-YKW.prototype.__dummyEmitLogs = function(rangeArray, val) {};
+YKW.prototype.__dummyEmitLogs = function(type, step, argsArray) {};
 
 /*
     Type supposedly like logs.verbose
@@ -107,6 +112,7 @@ YKW.prototype.__emitLogs = function(type, step, argsArray) {
     // To make arg array
     argsArray.unshift(step);
     argsArray.unshift(type);
+
     this.emit.apply(this, argsArray);
 };
 /* Emit Log Functions */
@@ -115,7 +121,7 @@ YKW.prototype.__emitLogs = function(type, step, argsArray) {
 YKW.prototype.__checkRange = function(rangeArray, val) {
     var self = this;
     var result = TRANGE_BINARYSEARCH(rangeArray, val);
-    self.emit("log.verbose", "YKW.prototype.__checkRange", "array and value and result" + VALIDATOR.toString(rangeArray) + " " + val + " " + result);
+
     return result;
 };
 
@@ -371,8 +377,6 @@ YKW.prototype.applyRules = function(msg, tag) {
     if(tag)     listofActiveRules = self.tagsRuleMap[tag];
     else        listofActiveRules = self.loadedRules;
 
-    self.emitLogs("log.debug", 1, [msg]);
-
     // In case no rules are found
     if(!UTIL.isArray(listofActiveRules)) listofActiveRules = [];
 
@@ -393,7 +397,6 @@ YKW.prototype.applyRules = function(msg, tag) {
             finalDecision       = null,
             compiledObj         = {};
 
-        // self.emit("log.info", "CHECKING RULE : " + eachRule);
 
         /*
             Conditions in RUle
@@ -429,9 +432,7 @@ YKW.prototype.applyRules = function(msg, tag) {
 
             var cDecision       = self.__checkOperation(op, msgValue, condValue);
 
-            self.emit("log.debug", "STEP 2", "Checking condition", eachCondition, cDecision);
-
-            self.emit("log.simulate.condition", eachRule, eachCondition, cDecision);
+            self.emitLogs("log.debug", 2, [eachRule, eachCondition, cDecision]);
 
             /* This is for Rule Trails , mostly for Debug */
             // msg.logs += UTIL.format('C:%s:%s:%s ', eachRule.id, iCondition, (cDecision ? 'T' : 'F'));
@@ -456,7 +457,6 @@ YKW.prototype.applyRules = function(msg, tag) {
 
         } // Each condition is a rule
 
-        self.emit("log.debug", "STEP 3", "Final decision", finalDecision);
 
         /*
             Actions in Rule .. Check if they can be applied ...
@@ -478,8 +478,8 @@ YKW.prototype.applyRules = function(msg, tag) {
         for(var iAction = 0; iAction < eachRule.actions.length; iAction ++) {
 
             /* This is for Rule Trails , mostly for Debug */
-            self.emit("log.debug", "STEP 4", UTIL.format('A:%s:%s ', eachRule.id, iAction));
-            self.emit("log.simulate.action", eachRule, finalDecision, eachRule.actions[iAction]);
+
+            self.emitLogs("log.debug", 3, [eachRule,  eachRule.actions[iAction],finalDecision]);
             self._applyAction(msg, eachRule.actions[iAction], eachRule);
         }
 
@@ -499,8 +499,6 @@ YKW.prototype.applyRules = function(msg, tag) {
         We have checked every rule against this message and have moved on
         to applying actions here.
     */
-
-    self.emit("log.debug", "STEP 5", "After rules are applied", msg);
 
     return msg;
 };
@@ -632,9 +630,6 @@ YKW.prototype.__applyActionSetVariable = function(msg, action) {
         // key, value
         actKey          = action.key,
         actVal          = action.value;
-
-    // self.emit("log.info", "MSG ", msg);
-    // self.emit("log.info", "ACTION ", action);
 
     // Value can be a compiled function or a direct value
     if(typeof actVal === "function")    _.set(msg,  actKey, actVal(msg));
@@ -893,7 +888,7 @@ YKW.prototype.loadRules = function(r) {
     }
 
     self.emit("log.info", "Loaded Rules : " + self.loadedRules.length);
-    self.emit("log.debug", "Loaded Rules : " + JSON.stringify(self.loadedRules));
+    self.emitLogs("log.debug", 1 , [JSON.stringify(self.loadedRules)]);
 
 };
 
