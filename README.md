@@ -3,7 +3,7 @@ Rule engine for most of generic decision makings ... Gui will follow some
 
 
 # Opts to instantiate
-- *debug*         : BOOLEAN . Will start emitting Debug Events. NOTE : Will SLOW DOWN the rule engine since Event Emitter is panifully Slow.
+- *debug*         : BOOLEAN . Will start emitting Debug Events. NOTE : Will SLOW DOWN the rule engine since Event Emitter is painfully Slow.
 
 
 # Rules
@@ -102,7 +102,7 @@ There are 3 types : All functions' first argument is opts, which contains keys d
 > which is default Boolean value in case of Error/exception. Opts will
 > also contain a *asyncTimeout* value, which will execute  callback with
 > *defaultOutput* .
-> 3. **Custom non-blocking Async function** ==>  Will move ahead in execution after calling this. This is a dont care function whose
+> 3. **Custom non-blocking Async function** ==>  Will move ahead in execution after calling this. This is a don't care function whose
 > output and execution do not matter. This is mainly for Action and is
 > used for jobs like logging, pushing some email, etc. . *asyncCallback*
 > can be specified here but it will not be blocking.
