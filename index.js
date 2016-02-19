@@ -203,7 +203,7 @@ YKW.prototype.__checkStringRange = function(rangeArray, msgVal) {
 
 YKW.prototype.__checkIsSet = function (cVal, msgVal) {
     if (!msgVal) {
-	return false;
+        return false;
     }
 
     if (typeof cVal !== 'string') {
@@ -370,8 +370,64 @@ YKW.prototype.applyRules = function(msg, tag) {
     */
 
     var
-        self                = this,
-        listofActiveRules   = null;
+        self                       = this,
+        listofActiveRules          = null,
+
+        // To keep track of positive, negative and neutral rules for a message
+
+        posRuleCtr                 = 0,
+        negRuleCtr                 = 0,
+        neutralRuleCtr             = 0,
+
+        /*
+
+          This will be used for calculating the metrics
+          for each message . The rule engine client
+          can then use these metrics according to its
+          use case .
+
+         */
+
+        metrics                    = {
+            "totalRules" : 0,
+
+            // Indicates which rules are applied
+            "positiveCount" : 0,
+
+             // Indicates which rules have not been applied
+            "negativeCount" : 0,
+
+            // This count indicates the rules that have been applied
+            // for which there are no conditions ...
+
+            "neutralCount"  : 0,
+
+            /*
+             The condition object will evolve like :
+                {
+                    "rule_id": {
+                        "totalCount"    : 0,
+                        "positiveCount" : 0,
+                        "negativeCount" : 0
+                    }
+                }
+             */
+
+            "conditions" : {
+            },
+
+            /*
+                 The action object will evolve like :
+                 {
+                     "rule_id": {
+                         "total"    : 0,
+                     }
+                 }
+             */
+
+            "actions" : {
+            }
+        };
 
     // Load only rules from that tag or all rules
     if(tag)     listofActiveRules = self.tagsRuleMap[tag];
@@ -379,6 +435,9 @@ YKW.prototype.applyRules = function(msg, tag) {
 
     // In case no rules are found
     if(!UTIL.isArray(listofActiveRules)) listofActiveRules = [];
+
+    // Set totalRules in the metrics before continuing.
+    _.set(metrics, "totalRules", listofActiveRules.length);
 
     // Each Rule
     for(var iRule = 0; iRule < listofActiveRules.length; iRule ++) {
@@ -395,12 +454,19 @@ YKW.prototype.applyRules = function(msg, tag) {
                 IFF no Condition , then we check finaldecision for null also
             */
             finalDecision       = null,
-            compiledObj         = {};
+            compiledObj         = {},
 
+            // To keep track of the positive and negative rules and conditions
+            // executed for the rule
+            posCondCtr          = 0,
+            negCondCtr          = 0;
 
         /*
             Conditions in RUle
-        */
+         */
+
+        _.set(metrics, "conditions." + eachRule.id + ".totalCount" , eachRule.conditions.length);
+
         for(var iCondition = 0; iCondition < eachRule.conditions.length; iCondition ++) {
 
             var
@@ -431,6 +497,18 @@ YKW.prototype.applyRules = function(msg, tag) {
             }
 
             var cDecision       = self.__checkOperation(op, msgValue, condValue);
+             /*
+                 Set the positive and negative condition set according to
+                 the cDecision . This would be independent upon the final
+                 decision and will only tell us how many conditions were
+                 executed before the final decision was reached.
+              */
+
+            if (cDecision) {
+                posCondCtr++;
+            } else {
+                negCondCtr++;
+            }
 
             self.emitLogs("log.debug", 2, [eachRule, eachCondition, cDecision]);
 
@@ -474,17 +552,40 @@ YKW.prototype.applyRules = function(msg, tag) {
             finalDecision = eval(eachRule.conditionsOperator({'c': compiledObj }));
         }
 
-
-
         /*
-            Actions in Rule .. Check if they can be applied ...
 
-            When do we apply actions ?
-                If finaldecision is TRUE
-                or NULL --> Why ? That mean no condition was there , hence we always apply that Rule
+             Actions in Rule .. Check if they can be applied ...
+
+             When do we apply actions ?
+             If finaldecision is TRUE
+             or NULL --> Why ? That mean no condition was there , hence we always apply that Rule
          */
 
-        if(finalDecision === false) continue;
+
+        _.set(metrics, "conditions." + eachRule.id + ".positiveCount" , posCondCtr);
+        _.set(metrics, "conditions." + eachRule.id + ".negativeCount" , negCondCtr);
+
+
+        // Before continuing , set the relevant metrics ...
+
+        if(finalDecision === false) {
+            negRuleCtr++;
+            continue;
+        }
+
+        // Presumed if its not continuing , it is a positive rule.
+        if (finalDecision === true) {
+            posRuleCtr++;
+        }
+
+        if (finalDecision === null) {
+            neutralRuleCtr++;
+        }
+
+        // Set the toal number of actions that will be applied
+        // for the rule in the metric object
+
+        _.set(metrics , "actions." + eachRule.id + ".totalAppliedactions" , eachRule.actions.length);
 
         // Apply each action for that rule
         for(var iAction = 0; iAction < eachRule.actions.length; iAction ++) {
@@ -510,7 +611,20 @@ YKW.prototype.applyRules = function(msg, tag) {
 
         We have checked every rule against this message and have moved on
         to applying actions here.
-    */
+
+        We also assign the rule metrics in each message under
+        the _ykw key .
+
+        Later on we can also add the logs inside the
+        _ykw object instead of using the event emitter.
+
+     */
+
+    _.set(metrics , "positiveCount", posRuleCtr);
+    _.set(metrics , "negativeCount", negRuleCtr);
+    _.set(metrics , "neutralCount", neutralRuleCtr);
+
+    _.set(msg, "_ykw.metrics", metrics);
 
     return msg;
 };
