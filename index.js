@@ -443,35 +443,47 @@ YKW.prototype.applyRules = function(msg, tag) {
             else {
 
                 // see conditions operator and decide what final decision is
+
+                // No need to continue if "and" operator has one condition as false.
+                // No need to continue if "or" operator has one condition as true.
+
                 if(eachRule.conditionsOperator == R_OPERATORS.AND) {
+
                     finalDecision = finalDecision && cDecision;
+
+                    if (finalDecision === false) break;
+
                 }
                 else if(eachRule.conditionsOperator == R_OPERATORS.OR) {
+
                     finalDecision = finalDecision || cDecision;
+
+                    if (finalDecision === true) break;
+
                 }
                 else { //for handling complex functions
                     _.set(compiledObj,iCondition,cDecision);
                 }
             }
 
-
         } // Each condition is a rule
 
-
-        /*
-            Actions in Rule .. Check if they can be applied ...
-         */
 
         if (eachRule.conditionsOperator != R_OPERATORS.AND && eachRule.conditionsOperator != R_OPERATORS.OR) {
             // Example : _.template(' <%= c[0] %> && <%= c[1] %> || <%= c[2] %> && <%= c[3] %>')
             finalDecision = eval(eachRule.conditionsOperator({'c': compiledObj }));
         }
 
+
+
         /*
+            Actions in Rule .. Check if they can be applied ...
+
             When do we apply actions ?
                 If finaldecision is TRUE
                 or NULL --> Why ? That mean no condition was there , hence we always apply that Rule
-        */
+         */
+
         if(finalDecision === false) continue;
 
         // Apply each action for that rule
