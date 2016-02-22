@@ -3,7 +3,7 @@ Rule engine for most of generic decision makings ... Gui will follow some
 
 
 # Opts to instantiate
-- *debug*         : BOOLEAN . Will start emitting Debug Events. NOTE : Will SLOW DOWN the rule engine since Event Emitter is panifully Slow.
+- *debug*         : BOOLEAN . Will start emitting Debug Events. NOTE : Will SLOW DOWN the rule engine since Event Emitter is panifully Slow. ( Tag 0.0.7 ) UPDATED : wont emit debug logs anymore
 
 
 # Rules
@@ -122,6 +122,7 @@ Rule Engine exposes an attribute : *customFunc* , which is essentially an object
 
 # Logs and Debugging
 Log events are emitted on 3 levels :: log.verbose , log.info and log.error . These are event names. Rule Engine does not make use of any logging library to keep things independent.
+( Tag 0.0.7 ) UPDATED : wont emit logs anymore. This will be taken care by Meta object
 
 
 # Rules Source/Save
@@ -145,29 +146,58 @@ Load the Rules first( and again and again ...) and simply apply them .
 /*  Load rules 
         Pass array of Objects in above mentioned format
 */
-loadRules(arrayOfRules);
+loaded_hash = loadRules(arrayOfRules);
 
 ```
 
 ```
 /*
-    msg : the object which needs to be changed
-    ruletag : single tag. TODO : 
+    msg : the object which needs to be changed . This object is passed by reference and if user wishes to keep the original object sane then he / she needs to clone the object before passing here ( using lodash/underscore or similar )
 
-    OPTS : {
-        copyObject : false , // default is false . This creates a copy of object
-    }
+    ruletag : single tag. TODO : support for multiple tags
 */
 
-newMsg = self.rules.applyRules(msg, ruletag, opts );
-
+meta_object = self.rules.applyRules(msg, ruletag);
 
 ```
 
+# Rule Engine Hash ( loaded_hash )
+This calculates a hash of loaded rules , which helps in audit. This is a simple SHA1 hash.
+
+# Meta Object
+Meta object saves the state of each rule , condition and action with variups required timestamps. It is not in the scope of this project to analyze the performace/metrics of the engine/rules.
+This can help in re-arranging conditions, removing redundant /slow rules, etc. . Idea should be to minimize the number of conditions/rules for each message.
+Schema of meta object
+
+```
+    _meta : {
+        "ts" : {
+            "rules_loaded" : dateTime Object,
+            "start" : dateTime Object,
+            "end"   : dateTime Object
+        },
+        "ruleEngineHash" : "" // ToDo : so That we should be able to TAG the appropriate hash code with Rule Engine version
+
+        "rules" : {
+           "r1" : {
+                "conditions" : {
+                    "c1"    : true,
+                    "c2"    : false
+                },
+                "applied"   : true,
+
+                "actions"   : {
+
+                }
+           } 
+       }
+    }
+```
 
 # Todo / improvements / known Bugs
 
 - Support for Custom Blocking/non-blocking sync/async functions is still debatable and is not added as of now
+- Rule Snapshots ? Rule Audits ?
 - How to define a common Rules language ? Currently Rules are picked from DB. Is that standard way , or should we define an API for this ?
 - Apply rule should accept array of tags
 - Give a GUI to manage Rules/ get status/ get active Rules, etc...
