@@ -9,7 +9,9 @@ var
     /* NODE internal */
     UTIL                = require('util'),
     PATH                = require('path'),
-    EVENTEMITTER        = require('events').EventEmitter,
+
+    /* removing event emitter issue #14 */
+    // EVENTEMITTER        = require('events').EventEmitter,
 
     /* NPM Third Party */
     _                   = require('lodash'),
@@ -68,8 +70,8 @@ var
         'IS_NOT_OF_SET'         :  '!set'
     };
 
-
-UTIL.inherits(YKW, EVENTEMITTER);
+/* removing event emitter issue #14 */
+// UTIL.inherits(YKW, EVENTEMITTER);
 
 function YKW(opts) {
 
@@ -84,13 +86,18 @@ function YKW(opts) {
 
     // Need to disable this later.
     self.debug = _.get(opts, 'debug', false);
-    if(self.debug === true) self.emitLogs = self.__emitLogs;
-    else self.emitLogs = self.__dummyEmitLogs;
 
-    EVENTEMITTER.call(self);
+    /* removing event emitter issue #14 */
+    // if(self.debug === true) self.emitLogs = self.__emitLogs;
+    // else self.emitLogs = self.__dummyEmitLogs;
+
+    /* removing event emitter issue #14 */
+    // EVENTEMITTER.call(self);
 }
 
 
+
+/* removing event emitter issue #14 */
 
 /*
     Emit Logs Functions.
@@ -99,7 +106,7 @@ function YKW(opts) {
 */
 
 
-YKW.prototype.__dummyEmitLogs = function(type, step, argsArray) {};
+// YKW.prototype.__dummyEmitLogs = function(type, step, argsArray) {};
 
 /*
     Type supposedly like logs.verbose
@@ -107,15 +114,16 @@ YKW.prototype.__dummyEmitLogs = function(type, step, argsArray) {};
     argsArray : Whatever needs to passed in event emitter as info
 */
 
-YKW.prototype.__emitLogs = function(type, step, argsArray) {
+// YKW.prototype.__emitLogs = function(type, step, argsArray) {
 
-    // To make arg array
-    argsArray.unshift(step);
-    argsArray.unshift(type);
+//     argsArray.unshift(step);
+//     argsArray.unshift(type);
 
-    this.emit.apply(this, argsArray);
-};
+//     this.emit.apply(this, argsArray);
+// };
 /* Emit Log Functions */
+
+
 
 
 YKW.prototype.__checkRange = function(rangeArray, val) {
@@ -125,6 +133,9 @@ YKW.prototype.__checkRange = function(rangeArray, val) {
     return result;
 };
 
+
+
+/* removing event emitter issue #14 */
 
 /*
 
@@ -136,15 +147,17 @@ YKW.prototype.__checkRange = function(rangeArray, val) {
 
 */
 
-YKW.prototype.enableDebug = function () {
-    var self = this;
-    self.emitLogs = self.__emitLogs;
-};
+// YKW.prototype.enableDebug = function () {
+//     var self = this;
+//     self.emitLogs = self.__emitLogs;
+// };
 
-YKW.prototype.disableDebug = function () {
-    var self = this;
-    self.emitLogs = self.__dummyEmitLogs;
-};
+// YKW.prototype.disableDebug = function () {
+//     var self = this;
+//     self.emitLogs = self.__dummyEmitLogs;
+// };
+
+
 
 /* Check Datetime Range */
 YKW.prototype.__checkDateTimeRange = function(momentArray, msgVal) {
@@ -432,8 +445,6 @@ YKW.prototype.applyRules = function(msg, tag) {
 
             var cDecision       = self.__checkOperation(op, msgValue, condValue);
 
-            self.emitLogs("log.debug", 2, [eachRule, eachCondition, cDecision]);
-
             /* This is for Rule Trails , mostly for Debug */
             // msg.logs += UTIL.format('C:%s:%s:%s ', eachRule.id, iCondition, (cDecision ? 'T' : 'F'));
 
@@ -479,7 +490,6 @@ YKW.prototype.applyRules = function(msg, tag) {
 
             /* This is for Rule Trails , mostly for Debug */
 
-            self.emitLogs("log.debug", 3, [eachRule,  eachRule.actions[iAction],finalDecision]);
             self._applyAction(msg, eachRule.actions[iAction], eachRule);
         }
 
@@ -886,9 +896,6 @@ YKW.prototype.loadRules = function(r) {
             self.tagsRuleMap[tag].push(self.loadedRules[irule]);
         }
     }
-
-    self.emit("log.info", "Loaded Rules : " + self.loadedRules.length);
-    self.emitLogs("log.debug", 1 , [JSON.stringify(self.loadedRules)]);
 
 };
 
