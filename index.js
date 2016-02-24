@@ -861,7 +861,7 @@ YKW.prototype.loadRules = function(r) {
             var row_new = item.rule;
 
             // set tags
-            var tags = _.get(item[''], 'tags', null);
+            var tags = _.get(item.rule_tags, 'tags', null);
             row_new.tags = (tags) ? tags.split(',') : [];
 
             // set conditions
