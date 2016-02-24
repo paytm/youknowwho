@@ -13,6 +13,7 @@ var
     /* removing event emitter issue #14 */
     // EVENTEMITTER        = require('events').EventEmitter,
 
+    CRYPTO              = require('crypto'),
     /* NPM Third Party */
     _                   = require('lodash'),
     Q                   = require('q'),
@@ -77,7 +78,22 @@ function YKW(opts) {
 
     var self = this;
 
-    self.opts = opts;
+    self.opts  = opts;
+
+    self._meta = {
+
+        "ts" : {
+            "rules_loaded" : null,
+            "start"        : null,
+            "end"          : null
+        },
+
+        "ruleEngineHash" : "",
+
+        "rules" : {
+        }
+
+    };
 
     /* If debug is true , we  DO NOT EMIT ... */
 
@@ -384,7 +400,8 @@ YKW.prototype.applyRules = function(msg, tag) {
 
     var
         self                = this,
-        listofActiveRules   = null;
+        listofActiveRules   = null,
+        _meta                = _.cloneDeep(self._meta);
 
     // Load only rules from that tag or all rules
     if(tag)     listofActiveRules = self.tagsRuleMap[tag];
@@ -392,6 +409,8 @@ YKW.prototype.applyRules = function(msg, tag) {
 
     // In case no rules are found
     if(!UTIL.isArray(listofActiveRules)) listofActiveRules = [];
+
+    _.set(_meta, "ts.start", Date.now());
 
     // Each Rule
     for(var iRule = 0; iRule < listofActiveRules.length; iRule ++) {
@@ -410,6 +429,11 @@ YKW.prototype.applyRules = function(msg, tag) {
             finalDecision       = null,
             compiledObj         = {};
 
+        _.set(_meta, "rules." + eachRule.id + ".conditions", {});
+        _.set(_meta, "rules." + eachRule.id + ".total_conditions", eachRule.conditions.length);
+
+        _.set(_meta, "rules." + eachRule.id + ".actions", {});
+        _.set(_meta, "rules." + eachRule.id + ".total_actions", eachRule.actions.length);
 
         /*
             Conditions in RUle
@@ -448,6 +472,7 @@ YKW.prototype.applyRules = function(msg, tag) {
             /* This is for Rule Trails , mostly for Debug */
             // msg.logs += UTIL.format('C:%s:%s:%s ', eachRule.id, iCondition, (cDecision ? 'T' : 'F'));
 
+            _.set(_meta, "rules." + eachRule.id + ".conditions." + eachCondition.id, cDecision);
 
             /* Check if 1st condition */
             if(iCondition === 0)    finalDecision = cDecision;
@@ -482,14 +507,16 @@ YKW.prototype.applyRules = function(msg, tag) {
             When do we apply actions ?
                 If finaldecision is TRUE
                 or NULL --> Why ? That mean no condition was there , hence we always apply that Rule
-        */
+         */
+
+        _.set(_meta, "rules." + eachRule.id + ".applied", finalDecision);
+
         if(finalDecision === false) continue;
 
         // Apply each action for that rule
         for(var iAction = 0; iAction < eachRule.actions.length; iAction ++) {
 
             /* This is for Rule Trails , mostly for Debug */
-
             self._applyAction(msg, eachRule.actions[iAction], eachRule);
         }
 
@@ -509,8 +536,8 @@ YKW.prototype.applyRules = function(msg, tag) {
         We have checked every rule against this message and have moved on
         to applying actions here.
     */
-
-    return msg;
+    _.set(_meta, "ts.end", Date.now());
+    return _meta;
 };
 
 /*
@@ -896,6 +923,13 @@ YKW.prototype.loadRules = function(r) {
             self.tagsRuleMap[tag].push(self.loadedRules[irule]);
         }
     }
+
+
+    // Filling meta
+    self._meta.ts.rules_loaded = Date.now();
+
+    // to check hash function
+    self._meta.ruleEngineHash  = CRYPTO.createHash('sha1').update(JSON.stringify(self.loadedRules)).digest('hex');
 
 };
 
