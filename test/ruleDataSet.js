@@ -10,7 +10,7 @@ var rules = [{
         priority: 170001
     },
     'rule_tags': {
-        tags: 'A'
+        tags: 'natural'
     },
     rule_condition: {
         id: 1,
@@ -21,8 +21,8 @@ var rules = [{
     rule_action: {
         id: 1,
         action: 'SET_VARIABLE',
-        key: 'message.action_info.is_integer',
-        value: '1'
+        key: 'is_natural',
+        value: 1
     }
 }];
 
