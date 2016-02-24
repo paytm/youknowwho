@@ -481,10 +481,14 @@ YKW.prototype.applyRules = function(msg, tag) {
                 // see conditions operator and decide what final decision is
                 if(eachRule.conditionsOperator == R_OPERATORS.AND) {
                     finalDecision = finalDecision && cDecision;
+                    if (finalDecision === false) break;
                 }
+
                 else if(eachRule.conditionsOperator == R_OPERATORS.OR) {
                     finalDecision = finalDecision || cDecision;
+                    if (finalDecision === true) break;
                 }
+
                 else { //for handling complex functions
                     _.set(compiledObj,iCondition,cDecision);
                 }
