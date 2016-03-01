@@ -14,7 +14,10 @@ var
     _                   = require('lodash'),
     MOMENT              = require('moment'),
     VALIDATOR           = require('validator'),
-    RANGE               = require('./lib/tinyRange');
+    RANGE               = require('../lib/tinyRange'),
+
+    /* YKW Internals */
+    UTILITIES           = require('../lib/utilities');
 
 
 function conditions () {
@@ -369,7 +372,7 @@ conditions.prototype._parseCondition = function (condition) {
     var self = this;
 
     // If Rule Condition values have true / false, then lets parse it to Boolean
-    _.set(condition, "value", self.__toBoolOrNull(_.get(condition , "value", null)));
+    _.set(condition, "value", UTILITIES.toBoolOrNull(_.get(condition , "value", null)));
 
     // if range is in condition , then Lets parse it using TinyRange
     if([self.R_COND_OPS.RANGE , self.R_COND_OPS.NOT_RANGE].indexOf(condition.operation) > -1)
