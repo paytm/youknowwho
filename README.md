@@ -15,13 +15,13 @@ Rule engine for most of generic decision makings ... Gui will follow some
 - *Status*    : obvious
 - *Priority*  : Lower the integer value, higher the priority.
 
-- *Conditonal Operator* : Operator Applied to all conditions to calculate final True/False value for conditions. 
+- *Conditonal Operator* : Operator Applied to all conditions to calculate final True/False value for conditions.
     || if all conditions are to be || (ORed)
     && if all conditions are to be && (ANDed)
     Custom value E.g. <%= c[0] %> && <%= c[1] %> || <%= c[2] %> && <%= c[3] %> : which dictates how conditions are manipulated
 
 - *Conditions* : are applied sequentially, and are blocking in manner. Next condition is applied only after previous has been evaluated. More about Rule conditions in next topic
- 
+
 - *Actions* : are applied only after conditions evaluate to TRUE according to conditional operator's value.Are sequential, and blocking in manner. Next Action is applied only after previous has been evaluated. More about Rule Actions in next topic
 
 
@@ -29,7 +29,7 @@ Rule engine for most of generic decision makings ... Gui will follow some
 Each condition has 4 parts
 
 1. **Condition**  : possible options
-> + **Check Variable** : Default option which uses key value operation 
+> + **Check Variable** : Default option which uses key value operation
 > + **Custom blocking Sync function** ( ToDo )
 > + **Custom blocking Async Function** ( ToDo )
 
@@ -37,32 +37,32 @@ Each condition has 4 parts
 3. **Value**         : which will be compared to the key
 4. **Operation**     : How to compare. Possible options are
 
-> + ( '=', 'Equals ( = )'), 
+> + ( '=', 'Equals ( = )'),
 > ( '!=', 'Not Equals ( != )'),
-> 
+>
 > + ( '>', 'Great than Integer ( > )'),
 > ( '>=', 'Great than Equals
 > Integer( >= )'),
-> 
-> + ( '<', 'Less than Integer( < )'), 
+>
+> + ( '<', 'Less than Integer( < )'),
 > ( '<=', 'Less than Equals Integer(<= )'),
-> 
-> + E.g. : 1,2,4~5, 6~10,11,12~ 
+>
+> + E.g. : 1,2,4~5, 6~10,11,12~
 > ('range', 'In Numerical Range ( range )'),
 > ('!range', 'Not In Numerical Range ( !range )'),
-> 
-> + E.g. : 2015-06-11 ~ 2015-07-12 
-> ('datetimerange', 'In DateTime Range (datetimerange )'), 
+>
+> + E.g. : 2015-06-11 ~ 2015-07-12
+> ('datetimerange', 'In DateTime Range (datetimerange )'),
 > ('!datetimerange', 'Not In DateTime Range (!datetimerange )'),
-> 
+>
 > + ('timerange', 'In Time Range ( timerange )'),
 > ('!timerange', 'Not In Time Range ( !timerange )'),
-> 
-> + ('regex', 'In Regex ( regex )'), 
+>
+> + ('regex', 'In Regex ( regex )'),
 > ('!regex', 'Not In Regex ( !regex)'),
-> 
-> + E.g. ["a", "b", "c"] 
-> ('stringrange', 'In String Array ( stringrange)'), 
+>
+> + E.g. ["a", "b", "c"]
+> ('stringrange', 'In String Array ( stringrange)'),
 > ('!stringrange', 'Not In String Array ( !stringrange )'),
 > + E.g. [1, 2, 3]
 > ('set', 'Is a part of the Set (set)'),
@@ -75,7 +75,7 @@ To provide dynamic input values, use the lodash template syntax.
 # Rule Actions
 Each Action will have 3 parts
 
-1.  **Action** : Possible options are 
+1.  **Action** : Possible options are
 > + **Set Variable** ==> Sets a variable in the source message
 > + **Stop Processing more rules** ==> Stop Processing more rule/action after this action
 > + **DANGEROUS_EVAL** ==> This will 'eval' the key and overwrite it.
@@ -96,7 +96,7 @@ Each Action will have 3 parts
 There are 3 types : All functions' first argument is opts, which contains keys depending upon usage
 
 > 1. **Custom blocking Sync function** ==> Next condition/action is executed only when this function returns. For condition this is
-> supposed to return TRUE/FALSE. 
+> supposed to return TRUE/FALSE.
 > 2. **Custom blocking Async function** ==>  opts will contains *asyncCallback* ( cb ) .This should be called when work of action/condition is over. In case of condition , cb should be called
 > with argument TRUE/FALSE . Opts will also contain *defaultOutput*
 > which is default Boolean value in case of Error/exception. Opts will
@@ -137,13 +137,13 @@ Maybe we will change it later to a more JSONified format
 
 
 # GUI ?
-We at paytm save rules in Mysql and use Django Admin to create a rule engine around it. It is very simplistic. Repos for this is open sourced as well. 
+We at paytm save rules in Mysql and use Django Admin to create a rule engine around it. It is very simplistic. Repos for this is open sourced as well.
 
 
 # Usage
 Load the Rules first( and again and again ...) and simply apply them .
 ```
-/*  Load rules 
+/*  Load rules
         Pass array of Objects in above mentioned format
 */
 loaded_hash = loadRules(arrayOfRules);
@@ -189,7 +189,7 @@ Schema of meta object
                 "actions"   : {
 
                 }
-           } 
+           }
        }
     }
 ```
