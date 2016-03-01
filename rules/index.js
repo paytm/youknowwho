@@ -11,11 +11,15 @@ var
 
 
 function rules () {
+
     var self = this;
 
     self.R_OPERATORS         = {
         AND                     : "&&",
         OR                      : "||"
+    };
+
+    self.loadedRules         = {
     };
 }
 
@@ -181,13 +185,13 @@ rules.prototype.applyRules = function(msg, tag) {
     return _meta;
 };
 
-
 /*
     Here We load rules from Database.
     And keep reloading every 5 minutes or so ...
  */
 
-rules.prototype.loadRules = function(r) {
+rules.prototype.loadRules = function(r, CONDITION, ACTION) {
+
   var
         self        = this,
         result      = [],
@@ -224,8 +228,9 @@ rules.prototype.loadRules = function(r) {
               }
         }
     */
-        rule_map    = {};
-
+         rule_map      = {},
+         tag_rule_map  = {},
+         rule_hash     = null;
 
     r.forEach(function (item) {
         /* HAck : to parse the value as true/false boolean
@@ -243,7 +248,7 @@ rules.prototype.loadRules = function(r) {
             // see if rule condition has already been there
             if (!rule_condition_map[row_found.id][item.rule_condition.id]) {
 
-                item.rule_condition = self._parseRuleCondition(item.rule_condition);
+                item.rule_condition = CONDITION._parseRuleCondition(item.rule_condition);
                 row_found.conditions.push(item.rule_condition);
 
                 rule_condition_map[row_found.id][item.rule_condition.id] = true;
@@ -252,7 +257,7 @@ rules.prototype.loadRules = function(r) {
             // see if action is already there
             if (!rule_action_map[row_found.id][item.rule_action.id]) {
 
-                item.rule_action = self._parseRuleAction(item.rule_action);
+                item.rule_action = ACTION._parseRuleAction(item.rule_action);
                 row_found.actions.push(item.rule_action);
 
                 rule_action_map[row_found.id][item.rule_action.id] = true;
@@ -268,11 +273,11 @@ rules.prototype.loadRules = function(r) {
             row_new.tags = (tags) ? tags.split(',') : [];
 
             // set conditions
-            item.rule_condition = self._parseRuleCondition(item.rule_condition);
+            item.rule_condition = CONDITION._parseRuleCondition(item.rule_condition);
             row_new.conditions = [ item.rule_condition];
 
             // set actions
-            item.rule_action = self._parseRuleAction(item.rule_action);
+            item.rule_action = ACTION._parseRuleAction(item.rule_action);
             row_new.actions    = [ item.rule_action ];
 
             // setting condition to avoid stuff : this is join
@@ -290,13 +295,11 @@ rules.prototype.loadRules = function(r) {
 
             // Final Rule Map
             rule_map[item.rule.id] = row_new;
-
         }
     });
 
     // Get a List of Rules , then we will sort it
     Object.keys(rule_map).forEach(function (rule_id) {
-
         // Push the Rule to a list
         result.push(rule_map[rule_id]);
     });
@@ -304,37 +307,38 @@ rules.prototype.loadRules = function(r) {
     /* Sort Resultant Rules by priority */
     result = _.sortBy(result, 'priority');
 
-    /* Assign the rules to loaded rules */
-    self.loadedRules = result;
+    rule_hash = CRYPTO.createHash('sha1').update(JSON.stringify(result)).digest('hex');
+
+    _.set(self.loadedRules, rule_hash + ".rules" , result);
+
+
     /*
         Push the Rules to a Tag List Map so that
         we can access rules based on tags
-
         NOTE : This is done after sorting so that tagged rules are also priority based
-    */
-    self.tagsRuleMap = {};
+     */
 
-    for(var irule = 0 ; irule < self.loadedRules.length; irule++) {
-
+    for (var irule = 0 ; irule < result.length; irule++) {
         // go through tags of each rule .. and create buckets
-        for(var jtag = 0; jtag < self.loadedRules[irule].tags.length; jtag ++) {
-            var tag = self.loadedRules[irule].tags[jtag];
+        for(var jtag = 0; jtag < result[irule].tags.length; jtag ++) {
+
+            var tag = result[irule].tags[jtag];
 
             // if this tag does not exist, create it
-            if(!self.tagsRuleMap[tag]) self.tagsRuleMap[tag] = [];
+            if(!tag_rule_map[tag]) tag_rule_map[tag] = [];
 
-            self.tagsRuleMap[tag].push(self.loadedRules[irule]);
+            tag_rule_map[tag].push(result[irule]);
         }
     }
 
+    _.set(self.loadedRules, rule_hash + ".tagRules" , tag_rule_map);
 
-    // Filling meta
-    self._meta.ts.rules_loaded = Date.now();
+    return {
+        rules_loaded_time : Date.now(),
+        ruleEngineHash    : rule_hash
+    };
 
-    // to check hash function
-    self._meta.ruleEngineHash  = CRYPTO.createHash('sha1').update(JSON.stringify(self.loadedRules)).digest('hex');
 
 };
-
 
 module.exports = rules;
