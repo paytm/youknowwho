@@ -9,6 +9,14 @@ var reData     = require('./ruleDataSet');
 
 var re = new ykw();
 
+
+describe("Load Rules Test Suite" , function () {
+    it("Should load the rules into the rule engine " , function () {
+        re.loadRules(reData);
+    });
+});
+
+
 describe("Basic Operator Test Suite", function () {
 
     before(function() {

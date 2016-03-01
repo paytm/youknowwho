@@ -7,26 +7,27 @@
 
 var
     /* NODE internal */
-    UTIL                = require('util'),
-    PATH                = require('path'),
-
-    /* removing event emitter issue #14 */
-    // EVENTEMITTER        = require('events').EventEmitter,
-
 
     /* NPM Third Party */
-    _                   = require('lodash');
+    _                         = require('lodash'),
+
+    /* YKW INTERNALS */
+    RULE                      = null,
+    RULE_CLASS                = require('./rules'),
+
+    ACTION                    = null,
+    ACTION_CLASS              = require('./actions'),
+
+    CONDITION                 = null,
+    CONDITION_CLASS           = require('./conditions');
 
 
-    /* Global Variables */
 
+function YKW (opts) {
 
-
-
-/* removing event emitter issue #14 */
-// UTIL.inherits(YKW, EVENTEMITTER);
-
-function YKW(opts) {
+    RULE               = new RULE_CLASS();
+    ACTION             = new ACTION_CLASS();
+    CONDITION          = new CONDITION_CLASS();
 
     var self = this;
 
@@ -47,71 +48,28 @@ function YKW(opts) {
 
     };
 
-    /* If debug is true , we  DO NOT EMIT ... */
-
-    // This fact can be changed if the user explicity
-    // calls the enableDebug function ...
-
-    // Need to disable this later.
-    self.debug = _.get(opts, 'debug', false);
-
-    /* removing event emitter issue #14 */
-    // if(self.debug === true) self.emitLogs = self.__emitLogs;
-    // else self.emitLogs = self.__dummyEmitLogs;
-
-    /* removing event emitter issue #14 */
-    // EVENTEMITTER.call(self);
 }
 
-/* removing event emitter issue #14 */
 
-/*
-    Emit Logs Functions.
-    If Debug is true , we assign the emitLogs function to __emitLogs otherwise to __dummyEmitLogs.
-    Just saving an if condition :D
-*/
+YKW.prototype.loadRules = function (rules) {
+    var self = this;
 
+    /*
+     Prototyping with this idea ,
+     lets pass the objects for actions and conditions along
+     with rules inside loadRules.
 
-// YKW.prototype.__dummyEmitLogs = function(type, step, argsArray) {};
+     This is because the parseAction and parseCondtion functions
+     are used while loading the rules .
 
-/*
-    Type supposedly like logs.verbose
-    Step : to track steps and which steps to listen to
-    argsArray : Whatever needs to passed in event emitter as info
-*/
+     */
 
-// YKW.prototype.__emitLogs = function(type, step, argsArray) {
+    var loadRulesResult = RULE.loadRules(rules, CONDITION, ACTION);
 
-//     argsArray.unshift(step);
-//     argsArray.unshift(type);
+    self._meta.ts.rules_loaded  = loadRulesResult.rules_loaded_time;
+    self._meta.latest_rule_hash = loadRulesResult.ruleEngineHash;
 
-//     this.emit.apply(this, argsArray);
-// };
-/* Emit Log Functions */
-
-
-/* removing event emitter issue #14 */
-
-/*
-
- The following functions are enabled so that
- people can enable and disable debug logs at run time ...
-
- Useful if you want to give back a
- response as to what happens in the rule engine .
-
-*/
-
-// YKW.prototype.enableDebug = function () {
-//     var self = this;
-//     self.emitLogs = self.__emitLogs;
-// };
-
-// YKW.prototype.disableDebug = function () {
-//     var self = this;
-//     self.emitLogs = self.__dummyEmitLogs;
-// };
-
+};
 
 
 module.exports = YKW;
