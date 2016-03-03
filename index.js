@@ -13,62 +13,32 @@ var
 
     /* YKW INTERNALS */
     RULE                      = null,
-    RULE_CLASS                = require('./rules'),
-
-    ACTION                    = null,
-    ACTION_CLASS              = require('./actions'),
-
-    CONDITION                 = null,
-    CONDITION_CLASS           = require('./conditions');
-
+    RULE_CLASS                = require('./lib/rule');
 
 
 function YKW (opts) {
 
-    RULE               = new RULE_CLASS();
-    ACTION             = new ACTION_CLASS();
-    CONDITION          = new CONDITION_CLASS();
 
     var self = this;
 
+    RULE = new RULE_CLASS();
+
     self.opts  = opts;
-
-    self._meta = {
-
-        "ts" : {
-            "rules_loaded" : null,
-            "start"        : null,
-            "end"          : null
-        },
-
-        "ruleEngineHash" : "",
-
-        "rules" : {
-        }
-
-    };
 
 }
 
 
-YKW.prototype.loadRules = function (rules) {
-    var self = this;
+YKW.prototype.loadRules  = function (rules) {
+    RULE.loadRules(rules);
+};
 
-    /*
-     Prototyping with this idea ,
-     lets pass the objects for actions and conditions along
-     with rules inside loadRules.
+YKW.prototype.applyRules = function (callback, message, tag) {
+    // Set the current rule engine hash the meta object of the message
+    // This keeps a reference of the current snapshot of the rule engine.
 
-     This is because the parseAction and parseCondtion functions
-     are used while loading the rules .
+    var self  = this;
 
-     */
-
-    var loadRulesResult = RULE.loadRules(rules, CONDITION, ACTION);
-
-    self._meta.ts.rules_loaded  = loadRulesResult.rules_loaded_time;
-    self._meta.latest_rule_hash = loadRulesResult.ruleEngineHash;
-
+    RULE.executeRules(callback, message, tag);
 };
 
 
