@@ -18,13 +18,10 @@ var
 
 function YKW (opts) {
 
-
     var self = this;
-
     RULE = new RULE_CLASS();
 
     self.opts  = opts;
-
 }
 
 
@@ -33,11 +30,6 @@ YKW.prototype.loadRules  = function (rules) {
 };
 
 YKW.prototype.applyRules = function (callback, message, tag) {
-    // Set the current rule engine hash the meta object of the message
-    // This keeps a reference of the current snapshot of the rule engine.
-
-    var self  = this;
-
     RULE.executeRules(callback, message, tag);
 };
 
