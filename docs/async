@@ -4,16 +4,18 @@
 
 - loadedRules : make 2 new data structures :
   -- "#ruleHash" : {
-       "loadedRules" : [],
+       "rules" : [],
        "tagRules"    : {
          "tag" : []
        },
        msg_under_process : "integer"
      }
 
-     // Still don't know what this means .
+     self.flowControl     // Still don't know what this means .
   -- "#metaId" : {
-        "message" : #message
+      "rule_array_idx"     : #idx,
+      "rule_condition_idx" : #conditionIdx,
+      "rule_action_idx"    : #actionIdx
       }
 
   -- "latestRuleHash" : #ruleHash
