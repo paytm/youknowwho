@@ -53,7 +53,7 @@ All changes inside the message object will be referential.
      Action exec will only call the callback to indicate the (i know what to right).
 
 
-  8. updateMeta() -> can be called from applyAction, applyRule, applyCondition .....
+  8. updateMeta() -> can be called from applyRule,  .....
      - sets msg._meta._flowControl.rule_array_idx || null
      - sets msg._meta._flowControl.rule_condition_idx || null.
      - sets msg._meta._flowControl.rule_action_idx || null.
@@ -62,6 +62,7 @@ All changes inside the message object will be referential.
   9. applyRule (callback , message, rule):
      - checkMeta  && ruleHash to get which condition to execute next (getNextCondition).
      - applyCondition
+     - updateMeta
      - checkDecision
      - checkMeta  && ruleHash to get which action to execute next (getNextACtion).
      - applyAction
@@ -88,3 +89,10 @@ All changes inside the message object will be referential.
 
    Rules/
      - index.js ->
+
+
+
+Have support for async timeouts .... errors can never be percolated back to the rule engine ....
+
+
+in condition too....

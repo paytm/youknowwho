@@ -32,7 +32,8 @@ describe("Basic Operator Test Suite", function () {
             };
 
             // Tags to ensure independent spaces for test cases
-            re.applyRules(function (error, reMeta) {
+            re.applyRules(function (reMeta) {
+
                 // Normal Rule check ...
                 should(message).have.property('is_natural', 1);
 
@@ -85,7 +86,7 @@ describe("Basic Operator Test Suite", function () {
 
 
             // Tags to ensure independent spaces for test cases
-            re.applyRules(function (error, reMeta) {
+            re.applyRules(function (reMeta) {
 		// Normal Rule check ...
 
 		should(message).not.have.property('is_natural');
@@ -137,7 +138,7 @@ describe("Basic Operator Test Suite", function () {
 
 
             // Tags to ensure independent spaces for test cases
-            re.applyRules(function (error, reMeta) {
+            re.applyRules(function (reMeta) {
                 // Normal Rule check ...
 
                 should(message).not.have.property('is_natural');
