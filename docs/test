@@ -1,0 +1,25 @@
+Object of a 100 keys ... random ...
+
+
+Regression and Coverage and Performance :
+
+List of variables in an array (these are the object keys)
+
+
+100 rules -
+
+1) random to select how many rules (100 -1000)
+  1) random conditions in the first rules :
+     random : check variable on each conditoins
+     operation : random ...
+     check value : random ...
+
+
+     set_variable : also random .... the value to be chose random ... total actions to be applied is random .
+
+
+
+
+
+
+White Box Testing ....
