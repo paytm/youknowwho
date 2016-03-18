@@ -7,6 +7,8 @@ var ykw = require('../');
 
 var reData     = require('./ruleDataSet');
 
+var executables = require('./executables');
+
 var re = new ykw();
 
 
@@ -71,7 +73,7 @@ describe("Basic Operator Test Suite", function () {
                                          "applied": true
                                      }
                                  });
-		done();
+                done();
 
             }, message,'natural');
 
@@ -87,30 +89,30 @@ describe("Basic Operator Test Suite", function () {
 
             // Tags to ensure independent spaces for test cases
             re.applyRules(function (reMeta) {
-		// Normal Rule check ...
+                // Normal Rule check ...
 
-		should(message).not.have.property('is_natural');
+                should(message).not.have.property('is_natural');
 
-		// Meta Object checks
+                // Meta Object checks
 
-		should(reMeta).have.property('ts');
+                should(reMeta).have.property('ts');
 
-		should(reMeta.ts).have.property('rules_loaded');
-		should(reMeta.ts.rules_loaded).be.a.Number();
+                should(reMeta.ts).have.property('rules_loaded');
+                should(reMeta.ts.rules_loaded).be.a.Number();
 
-		should(reMeta.ts).have.property('start');
-		should(reMeta.ts.start).be.a.Number();
+                should(reMeta.ts).have.property('start');
+                should(reMeta.ts.start).be.a.Number();
 
-		should(reMeta.ts).have.property('end');
-		should(reMeta.ts.end).be.a.Number();
+                should(reMeta.ts).have.property('end');
+                should(reMeta.ts.end).be.a.Number();
 
 
-		should(reMeta).have.property('ruleEngineHash');
-		should(reMeta.ruleEngineHash).be.a.String();
+                should(reMeta).have.property('ruleEngineHash');
+                should(reMeta.ruleEngineHash).be.a.String();
 
-		should(reMeta).have.property('rules');
+                should(reMeta).have.property('rules');
 
-		// Would like assertions / deep object comparison now
+                // Would like assertions / deep object comparison now
 
                 should.deepEqual(reMeta.rules,
                                  {
@@ -124,7 +126,7 @@ describe("Basic Operator Test Suite", function () {
                                          "applied": false
                                      }
                                  });
-		done();
+                done();
 
             }, message,'natural');
         });
@@ -177,11 +179,44 @@ describe("Basic Operator Test Suite", function () {
                                      }
                                  });
 
-		done();
+                done();
 
             }, message,'natural');
 
         });
+
+    });
+
+});
+
+describe("Execute Function", function () {
+
+    var self = this;
+
+    // Setting lodash to pass inside exec
+
+    before(function() {
+        re.loadRules(reData);
+        re.loadExecutables(executables);
+        re.setExecCtx({
+          "_" : "this should be available"
+        });
+
+    });
+
+    it("Should parse a valid json", function () {
+
+        var message = {
+            name : '{"first":"John", "last" : "Doe"}'
+        };
+
+        re.applyRules(function (reMeta) {
+            should(message).have.property('exec_info');
+
+            should(message.exec_info).have.property('parse_json');
+            should.deepEqual(message.exec_info.parse_json,{"value": {"first":"John", "last":"Doe"}});
+
+        },message,'exec');
 
     });
 

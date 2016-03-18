@@ -1,7 +1,9 @@
+/*jshint multistr: true ,node: true*/
+
 "use strict";
 
-
-var rules = [{
+var rules = [
+{
     rule: {
         id: 1,
         name: 'Natural Number ',
@@ -23,6 +25,30 @@ var rules = [{
         action: 'SET_VARIABLE',
         key: 'is_natural',
         value: 1
+    }
+},
+{
+    rule: {
+        id: 2,
+        name: 'Execute  Function ',
+        external_reference: '',
+        conditionsOperator: '&&',
+        priority: 2
+    },
+    'rule_tags': {
+        tags: 'exec'
+    },
+    rule_condition: {
+        id: null,
+        key: null,
+        operation: null,
+        value: null
+    },
+    rule_action: {
+        id     : 2,
+        action : "EXEC",
+        key    : "parse_json",
+        value  : "name"
     }
 }];
 
