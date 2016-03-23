@@ -194,10 +194,21 @@ Schema of meta object
     }
 ```
 
-# Todo / improvements / known Bugs
 
+# Benchmarks : on single core
+ - 10K rules with 1 condition 1 action
+ - 1 rule with 10K conditions, 10K actions
+ - 1 rule, 1 condition, 1 action , 10K iterations
+
+
+## Philosophies 
+- Why will we never support 'calling rules' with multiple tag options ? : Then conditional operators among tags will be a major requirement and tags are essentially rule groups.
+
+
+# Todo / improvements / known Bugs
+- Write test cases to use Meta object as well as Rule engine output.
+- Do Benchmarks
 - Support for Custom Blocking/non-blocking sync/async functions is still debatable and is not added as of now
 - Rule Snapshots ? Rule Audits ?
 - How to define a common Rules language ? Currently Rules are picked from DB. Is that standard way , or should we define an API for this ?
-- Apply rule should accept array of tags
 - Give a GUI to manage Rules/ get status/ get active Rules, etc...
