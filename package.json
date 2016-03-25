@@ -24,7 +24,7 @@
   "dependencies": {
     "lodash": "~3.10.1",
     "moment": "~2.10.6",
-    "tiny-range-binarysearch": "https://github.com/paytm/tiny-range-binarysearch.git",
+    "tiny-range-binarysearch": "git+https://github.com/paytm/tiny-range-binarysearch.git",
     "validator": "^4.2.1"
   },
   "devDependencies": {
