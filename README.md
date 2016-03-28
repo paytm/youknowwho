@@ -1,5 +1,5 @@
 # youknowwho
-Rule engine for most of generic decision makings ... Gui will follow some
+Rule engine for most of generic decisions and flow control ... Gui will follow soon
 
 
 # Opts to instantiate
@@ -25,13 +25,11 @@ Rule engine for most of generic decision makings ... Gui will follow some
 - *Actions* : are applied only after conditions evaluate to TRUE according to conditional operator's value.Are sequential, and blocking in manner. Next Action is applied only after previous has been evaluated. More about Rule Actions in next topic
 
 
-# Rule Conditions
+### Rule Conditions
 Each condition has 4 parts
 
 1. **Condition**  : possible options
 > + **Check Variable** : Default option which uses key value operation
-> + **Custom blocking Sync function** ( ToDo )
-> + **Custom blocking Async Function** ( ToDo )
 
 2. **Key**           : Value / dictionary path which will be compared
 3. **Value**         : which will be compared to the key
@@ -64,6 +62,7 @@ Each condition has 4 parts
 > + E.g. ["a", "b", "c"]
 > ('stringrange', 'In String Array ( stringrange)'),
 > ('!stringrange', 'Not In String Array ( !stringrange )'),
+> 
 > + E.g. [1, 2, 3]
 > ('set', 'Is a part of the Set (set)'),
 > ('!set', 'Is not a part of the set (!set)'),
@@ -72,60 +71,50 @@ The value to the condition can be a static value or something that belongs to th
 To provide dynamic input values, use the lodash template syntax.
 
 
-# Rule Actions
+### Rule Actions
 Each Action will have 3 parts
 
 1.  **Action** : Possible options are
 > + **Set Variable** ==> Sets a variable in the source message
 > + **Stop Processing more rules** ==> Stop Processing more rule/action after this action
 > + **DANGEROUS_EVAL** ==> This will 'eval' the key and overwrite it.
-> + **Custom blocking Sync function** ( ToDo )
-> + **Custom blocking Async Function** ( ToDo )
-> + **Custom non blocking async Function** ( ToDo )
+> + **Execute custom functions** ==> This will execute a user defined functions in a set way with guidelines
 
 2. **Key** : For Set variable or according to action
 3. **Value** : For set variable or according to action. See Rule Action Value for options
 
-# Rule Action Value
+### Rule Action Value
 - **boolean** ==> "true" or "false" will be converted to boolean TRUE/FALSE
 - **template string** ==> Specify string in lodash format "<="" and it will be treated as a lodash template. The variables in the template are picked from message.
 - **normal string** : any string other than above two will be treated as a normal string.
 
 
-# Custom Function in Condition and Actions ( ToDo )
-There are 3 types : All functions' first argument is opts, which contains keys depending upon usage
+## Custom Function in Actions
+The function is expected to be in following format
 
-> 1. **Custom blocking Sync function** ==> Next condition/action is executed only when this function returns. For condition this is
-> supposed to return TRUE/FALSE.
-> 2. **Custom blocking Async function** ==>  opts will contains *asyncCallback* ( cb ) .This should be called when work of action/condition is over. In case of condition , cb should be called
-> with argument TRUE/FALSE . Opts will also contain *defaultOutput*
-> which is default Boolean value in case of Error/exception. Opts will
-> also contain a *asyncTimeout* value, which will execute  callback with
-> *defaultOutput* .
-> 3. **Custom non-blocking Async function** ==>  Will move ahead in execution after calling this. This is a dont care function whose
-> output and execution do not matter. This is mainly for Action and is
-> used for jobs like logging, pushing some email, etc. . *asyncCallback*
-> can be specified here but it will not be blocking.
+```sh
+function custom(callback, arg) {
+    
+    .... do something with arg()
+    callback();
+} 
+```
 
-**Custom function opts** ( ToDo )
-Condition and Action have custom functions to make use of cases which are not covered by Rule Engine. Idea is to realize what these functions can be and increase the scope of rule engine.
-opts are
+ - Each function's 1st argument will be the callback it is expected to call once its execution is over.
+ - There is no differentiation in blocking and non-blocking functions, and also in sync and async functions, since we are anyway passing a callback.
+
+ - **arg** : arg is the argument which can be passed to function by previous rules/actions. Each message will have a key :=> **msg.__execargs__** which will have key for each function. E.g. if user wishes to pass an object as an argument to function *f1* , it will set it in **msg.__execargs__.f1** .
+
+ - **function context** : Rule engine will expose a *execContext* which will be the object which will hold all function definitions and will be supplied as the context (this) in function execution.
+
+ - **Error handling/ execptions** : All functions will be called within a try-catch exception handling and rule engine is not expected to handle any error/exception.
 
 
-> - **defaultOutput** : Default output in case of condition. Can be true or false.
-> - **asyncCallback** : Async Callback that will be called after function has done its task.
-> - **asyncTimeout** : Timeout after which asyncCallback will be called with defaultOutut.
-> - **asyncTimeout** : Timeout after which asyncCallback will be called with defaultOutut.
-
-**How to use these functions?** ( ToDo )
-Rule Engine exposes an attribute : *customFunc* , which is essentially an object . The key is a string which is functio name and Value if function prototype. This keeps the seasoning dynamic. There is no need to declare whether the
-
-# Logs and Debugging
-Log events are emitted on 3 levels :: log.verbose , log.info and log.error . These are event names. Rule Engine does not make use of any logging library to keep things independent.
+### Logs and Debugging
 ( Tag 0.0.7 ) UPDATED : wont emit logs anymore. This will be taken care by Meta object
 
 
-# Rules Source/Save
+### Rules Source/Save
 Rules are to be submitted in Following Form : Array of Rules order by priority ( 1 being highest ). Ideally only Active Rules should be submitted.
 
 Each rule is a dictionary : Object having following Keys :
@@ -136,20 +125,27 @@ This means a lot of repeative information, but we find it easy to maintain a tab
 Maybe we will change it later to a more JSONified format
 
 
-# GUI ?
-We at paytm save rules in Mysql and use Django Admin to create a rule engine around it. It is very simplistic. Repos for this is open sourced as well.
+### GUI ?
+We at paytm save rules in Mysql and use Django Admin to create a rule engine around it. It is very simplistic. Repos will be open sourced as well, soon.
 
 
-# Usage
+### Usage
+
 Load the Rules first( and again and again ...) and simply apply them .
 ```
-/*  Load rules
-        Pass array of Objects in above mentioned format
+loaded_hash = ruleEngineObject.loadRules(arrayOfRules);
+
+/*  Loaded_hash is hash generated for the list of rules. This can be used to differentiate the set of rules.
 */
-loaded_hash = loadRules(arrayOfRules);
+```
+
+Specifying context of custom user-defined functions
+```
+ruleEngineObject.setExecContext(execObject);
 
 ```
 
+Applying Rules
 ```
 /*
     msg : the object which needs to be changed . This object is passed by reference and if user wishes to keep the original object sane then he / she needs to clone the object before passing here ( using lodash/underscore or similar )
@@ -157,19 +153,21 @@ loaded_hash = loadRules(arrayOfRules);
     ruletag : single tag. TODO : support for multiple tags
 */
 
-meta_object = self.rules.applyRules(msg, ruletag);
+meta_object = ruleEngineObject.applyRules(msg, ruletag);
 
 ```
 
-# Rule Engine Hash ( loaded_hash )
+
+
+### Rule Engine Hash ( loaded_hash )
 This calculates a hash of loaded rules , which helps in audit. This is a simple SHA1 hash.
 
-# Meta Object
+### Meta Object
 Meta object saves the state of each rule , condition and action with variups required timestamps. It is not in the scope of this project to analyze the performace/metrics of the engine/rules.
 This can help in re-arranging conditions, removing redundant /slow rules, etc. . Idea should be to minimize the number of conditions/rules for each message.
 Schema of meta object
 
-```
+```sh
     _meta : {
         "ts" : {
             "rules_loaded" : dateTime Object,
@@ -195,17 +193,20 @@ Schema of meta object
 ```
 
 
-# Benchmarks : on single core
+### Benchmarks : on single core
  - 10K rules with 1 condition 1 action
  - 1 rule with 10K conditions, 10K actions
  - 1 rule, 1 condition, 1 action , 10K iterations
 
 
-## Philosophies 
+### Theory 
 - Why will we never support 'calling rules' with multiple tag options ? : Then conditional operators among tags will be a major requirement and tags are essentially rule groups.
 
+- Changing Rule Engine execution from sync to async :
+    + While sync offered a lot more performance benefit , ease of usage and code simplicity , it lacked a majority extensibility , i.e. executing cutom functions in code flows. Conditions, while sync, are forcefully made async to keep the options open, and to keep performance realistic.
 
-# Todo / improvements / known Bugs
+
+### Todo / improvements / known Bugs
 - Write test cases to use Meta object as well as Rule engine output.
 - Do Benchmarks
 - Support for Custom Blocking/non-blocking sync/async functions is still debatable and is not added as of now
