@@ -1,6 +1,6 @@
 {
   "name": "youknowwho",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "Rule engine for most of generic decision makings ... Gui will follow soon",
   "main": "index.js",
   "scripts": {
@@ -26,6 +26,7 @@
     "moment": "~2.10.6",
     "tiny-range-binarysearch": "git+https://github.com/paytm/tiny-range-binarysearch.git",
     "validator": "^4.2.1"
+    "Faker": "git://github.com/Marak/Faker.js.git"
   },
   "devDependencies": {
     "mocha": "~2.3.3",
