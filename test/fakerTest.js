@@ -218,7 +218,7 @@ fakeData.prototype.generateRandomRules = function() {
 
   var ruleRandomId = {
     min: 1,
-    max: self.numberOfRules
+    max: numberOfRules
   };
 
   var condition_action_Ops = {
@@ -325,7 +325,7 @@ fakeData.prototype.generateResults = function() {
     for(var rule_index = 0; rule_index < ruleIds.length; rule_index++) {
       var ruleId = ruleIds[rule_index];
       var resCondition = self.applyConditions(data, ruleId);
-      if(!resObj) {
+      if(!resCondition) {
         continue;
       }
       
@@ -351,9 +351,10 @@ fakeData.prototype.generateResults = function() {
 fakeData.prototype.applyConditions = function(data, ruleId) {
   var self = this;
   var ruleObj = self.findRule(ruleId);
-  if(!ruleObj || ruleObj.length) {
+  if(!ruleObj || !ruleObj.length) {
     return undefined;
   }
+  
   var ruleOperator = ruleObj[0].conditionsOperator;
   var tocheck; 
   switch(ruleOperator) {
@@ -400,7 +401,7 @@ fakeData.prototype.applyConditions = function(data, ruleId) {
 
 fakeData.prototype.findRule = function(ruleId) {
   return this.randomRules.filter(function(obj) {
-    return obj.id === ruleId;
+    return Number(obj.rule.id) === Number(ruleId);
   });
 };
 
@@ -442,10 +443,10 @@ fakeData.prototype.processCondition = function(data, condition) {
     case '<': return Number(data[condition.key]) < Number(condition.value);
     case '>=': return Number(data[condition.key]) >= Number(condition.value);
     case '<=': return Number(data[condition.key]) <= Number(condition.value);
-    case 'datetimerange': return processDateTime(data,condition,true);
-    case '!datetimerange': return processDateTime(data,condition,false);
-    case 'timerange': return processTime(data,condition,true);
-    case '!timerange': return processTime(data,condition,false);
+    case 'datetimerange': return self.processDateTime(data,condition,true);
+    case '!datetimerange': return self.processDateTime(data,condition,false);
+    case 'timerange': return self.processTime(data,condition,true);
+    case '!timerange': return self.processTime(data,condition,false);
     default: return false;
   }
 };
@@ -481,6 +482,8 @@ module.exports = fakeData;
    if (require.main == module ) {
     var fake = new fakeData();
     fake.init();
+    //fake.randomRules = [{"rule":{"id":3,"name":"Random Test #3","priority":18580,"conditionsOperator":"&&"},"rule_condition":{"id":3,"key":"integer","operation":"!timerange","value":"01:00:00"},"rule_action":{"id":2,"action":"SET_VARIABLE","key":"eos","value":43232}},{"rule":{"id":3,"name":"Random Test #3","priority":18580,"conditionsOperator":"&&"},"rule_condition":{"id":3,"key":"integer","operation":"!timerange","value":"01:00:00"},"rule_action":{"id":2,"action":"SET_VARIABLE","key":"eos","value":43232}},{"rule":{"id":2,"name":"Random Test #2","priority":11965,"conditionsOperator":"&&"},"rule_condition":{"id":2,"key":"dateTimeInput","operation":"timerange","value":"10:00:00"},"rule_action":{"id":2,"action":"SET_VARIABLE","key":"illo","value":99651}},{"rule":{"id":2,"name":"Random Test #2","priority":11965,"conditionsOperator":"&&"},"rule_condition":{"id":2,"key":"dateTimeInput","operation":"timerange","value":"10:00:00"},"rule_action":{"id":2,"action":"SET_VARIABLE","key":"illo","value":99651}},{"rule":{"id":2,"name":"Random Test #2","priority":31211,"conditionsOperator":"&&"},"rule_condition":{"id":2,"key":"integer","operation":"timerange","value":"05:00:00"},"rule_action":{"id":3,"action":"SET_VARIABLE","key":"quia","value":39237}},{"rule":{"id":2,"name":"Random Test #2","priority":31211,"conditionsOperator":"&&"},"rule_condition":{"id":2,"key":"integer","operation":"timerange","value":"05:00:00"},"rule_action":{"id":3,"action":"SET_VARIABLE","key":"quia","value":39237}}];
+    //console.log(fake.findRule(2));
     //console.log(fake.getRandomTime());
   }
 } ());
