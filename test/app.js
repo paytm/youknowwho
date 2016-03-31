@@ -62,10 +62,6 @@ describe("YKW APPLY RULE API", function () {
 		var reMeta = response.body._meta;
 		var message = response.body.message;
 
-		console.log("### REMETA", JSON.stringify(reMeta));
-		console.log("### message", message);
-
-
                 // Normal Rule check ...
                 should(message).have.property('is_natural', 1);
 
