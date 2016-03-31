@@ -189,35 +189,3 @@ describe("Basic Operator Test Suite", function () {
 
 });
 
-describe("Execute Function", function () {
-
-    var self = this;
-
-    // Setting lodash to pass inside exec
-
-    before(function() {
-        re.loadRules(reData);
-        re.loadExecutables(executables);
-        re.setExecCtx({
-          "_" : "this should be available"
-        });
-
-    });
-
-    it("Should parse a valid json", function () {
-
-        var message = {
-            name : '{"first":"John", "last" : "Doe"}'
-        };
-
-        re.applyRules(function (reMeta) {
-            should(message).have.property('exec_info');
-
-            should(message.exec_info).have.property('parse_json');
-            should.deepEqual(message.exec_info.parse_json,{"value": {"first":"John", "last":"Doe"}});
-
-        },message,'exec');
-
-    });
-
-});
