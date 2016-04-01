@@ -38,3 +38,37 @@ YKW.prototype.setExecContext = function (context) {
 
 
 module.exports = YKW;
+
+
+if (require.main == module) {
+    /*
+     If executed directly, start the web server .
+     */
+    var
+        /* NPM Third Party */
+        CONFIG          = require('./config.js'),
+        PROGRAM         = require('commander'),
+
+        /* internal */
+        WEBSERVER       = require('./webServer/server.js'),
+        YKW_INSTANCE    = new YKW({}),
+        WS              = new WEBSERVER(CONFIG, YKW_INSTANCE);
+
+    PROGRAM
+        .option('-v, --verbose', 'Run in verbose mode')
+        .option('-p, --port <path>', 'Specify port number')
+        .parse(process.argv);
+
+    if (PROGRAM.verbose)    CONFIG.LOG_LEVEL = "verbose";
+
+    if (PROGRAM.port)       CONFIG.WEBSERVER.PORT = PROGRAM.port;
+
+    WS.setup(function (error) {
+        if (error) {
+            process.exit(1);
+        }
+
+        WS.start();
+    });
+
+}
