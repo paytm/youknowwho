@@ -145,9 +145,7 @@ webServer.prototype._setRoutes = function() {
      *    "message": {
      *        "integer": 1
      *    },
-     *    "tag": {
-     *        "natural"
-     *    }
+     *    "tag": "natural"
      * }
      * @apiSuccess (200) {json} message The message after the rule engine has been run.
      * @apiSuccess (200) {json} _meta The statistics (how many actions / conditions were run / time took) on the rule engine for this message.
