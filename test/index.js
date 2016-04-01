@@ -7,17 +7,28 @@ var ykw = require('../');
 
 var reData     = require('./ruleDataSet');
 
-var executables = require('./executables');
-
 var re = new ykw();
 
 
-describe("Load Rules Test Suite" , function () {
+describe("Rule Engine Test Suite" , function () {
+
+    it("Should not fail if there are no rules loaded", function (done) {
+        var message = {
+            "integer" : 1
+        };
+
+        re.applyRules(function (reMeta) {
+            done();
+        }, message);
+
+
+    });
+
     it("Should load the rules into the rule engine " , function () {
         re.loadRules(reData);
     });
-});
 
+});
 
 describe("Basic Operator Test Suite", function () {
 
@@ -188,4 +199,3 @@ describe("Basic Operator Test Suite", function () {
     });
 
 });
-
