@@ -23,25 +23,25 @@ function fakeData(config, opts) {
 
     self.keyOps = ['integer','dateTimeInput','timeInput']; //rangeInput to be added
 
-    self.operations = ['numOperators', 'stringOperators'];
+    //self.operations = ['numOperators', 'stringOperators'];
 
     self.actions = ['SET_VARIABLE', 'DANGEROUS_EVAL'];
 
     self.minRules = 2;//100;
 
-    self.maxRules = 4;//1000;
+    self.maxRules = 2;//1000;
 
-    self.minInputs = 3;//50;
+    self.minInputs = 2;//50;
 
-    self.maxInputs = 4;//100;    
+    self.maxInputs = 2;//100;    
 
-    self.minConditions = 2;//3;
+    self.minConditions = 1;//3;
 
-    self.maxConditions = 3;//5;
+    self.maxConditions = 2;//5;
 
-    self.minActions = 2;
+    self.minActions = 1;
 
-    self.maxActions = 3;//4;
+    self.maxActions = 2;//4;
 
     self.randomData = [];
 
@@ -139,6 +139,11 @@ fakeData.prototype.init = function() {
   console.log("------The results are------");
   console.log(JSON.stringify(self.resultMap));
 
+  return {
+    rules: self.randomRules,
+    resultMap: self.resultMap,
+    messages: self.randomData
+  }
 };
 
 fakeData.prototype.setRandomNumberofRules = function() {
@@ -176,8 +181,8 @@ fakeData.prototype.generateRandomInput = function() {
     message.id = index+1;
     message.integer = getRandomNumber();
     //message.rangeInput = self.getRandomRange(); To be added
-    message.dateTimeInput = self.getRandomDateTime();
-    message.timeInput = self.getRandomTime();
+    message.dateTimeInput = self.getRandomDateTime().split("~")[0].trim();
+    message.timeInput = self.getRandomTime().split("~")[0].trim();
     self.randomData.push(message);
   }
 };
@@ -227,7 +232,6 @@ fakeData.prototype.generateRandomRules = function() {
   };
 
   for(var index = 0; index < numberOfRules; index++) {
-    var ruleObj = {};
 
     //Rule info
     var rule = {};
@@ -235,7 +239,7 @@ fakeData.prototype.generateRandomRules = function() {
     rule.name = "Random Test #" + rule.id;
     rule.priority = getRandomNumber();
     rule.conditionsOperator = getRandomArrayElement(self.conditionalOperators);
-    ruleObj.rule = rule;
+    
     if(!self.ruleConditionMap[rule.id]) {
       self.ruleConditionMap[rule.id] = {};
     }
@@ -245,8 +249,7 @@ fakeData.prototype.generateRandomRules = function() {
 
     //Get random number of conditions & actions
     var numberofConditionsActions = getRandomNumber(condition_action_Ops);
-    //var totalConditions = 0;
-    //var totalActions = 0;
+  
     for(var condInd = 0; condInd < numberofConditionsActions; condInd++) {
       var rule_condition = self.getRandomCondition();
       var rule_action = self.getRandomAction()
@@ -257,9 +260,12 @@ fakeData.prototype.generateRandomRules = function() {
       if(!self.ruleActionMap[rule.id][rule_action.id]) {
         self.ruleActionMap[rule.id][rule_action.id] = rule_action;
       }
-      ruleObj.rule_condition = rule_condition;
-      ruleObj.rule_action = rule_action;
-      self.randomRules.push(ruleObj);
+
+      self.randomRules.push({
+        rule: rule,
+        rule_condition: rule_condition,
+        rule_action: rule_action
+      });
     }  
   }
 };
@@ -273,7 +279,16 @@ fakeData.prototype.getRandomCondition = function() {
   };
   conditionObj.id = getRandomNumber(conditionOps);
   conditionObj.key = getRandomArrayElement(self.keyOps);
-  conditionObj.operation = getRandomArrayElement(self[getRandomArrayElement(self.operations)]);
+  var operation;
+  switch(conditionObj.key) {
+    case 'integer': operation = "numOperators";
+                    break;
+    case 'dateTimeInput': operation = "stringOperators";
+                    break;
+    case 'timeInput': operation = "stringOperators";
+                    break;
+  }
+  conditionObj.operation = getRandomArrayElement(self[operation]);
   conditionObj.value = self.getRandomConditionValue(conditionObj.operation);
   return conditionObj; 
 }
@@ -303,10 +318,10 @@ fakeData.prototype.getRandomConditionValue = function(operation) {
     case '>=': returnValue = getRandomNumber();
                 break;
     case 'datetimerange':
-    case '!datetimerange': returnValue = self.getRandomDateTime().split('~')[0].trim();
+    case '!datetimerange': returnValue = self.getRandomDateTime();
                           break;
     case 'timerange': 
-    case '!timerange': returnValue = self.getRandomTime().split('~')[0].trim();
+    case '!timerange': returnValue = self.getRandomTime();
                        break;
   };
   return returnValue;
@@ -315,8 +330,10 @@ fakeData.prototype.getRandomConditionValue = function(operation) {
 fakeData.prototype.generateResults = function() {
   var self = this;
   var resultMap = {};
-
+  
   var ruleIds = Object.keys(self.ruleConditionMap);
+  console.log("----rule ids are---");
+  console.log(ruleIds);
   for(var index = 0; index < self.numberOfInputs; index++) {
     var data = self.randomData[index];
     var resultHaveProperty = [];
@@ -324,21 +341,32 @@ fakeData.prototype.generateResults = function() {
     var ruleResultMap = {};
     for(var rule_index = 0; rule_index < ruleIds.length; rule_index++) {
       var ruleId = ruleIds[rule_index];
+      console.log("-----ruleId to process------");
+      console.log(ruleId);
       var resCondition = self.applyConditions(data, ruleId);
+      console.log("-------applied Condition for ruleId----" + ruleId);
+      console.log(JSON.stringify(resCondition));
       if(!resCondition) {
         continue;
       }
       
       //Check if action to be applied
-      var resAction = self.applyActions(data, ruleId, resCondition); 
+      var resAction = self.applyActions(data, ruleId, resCondition);
+      console.log("-----res form action----");
+      console.log(JSON.stringify(resAction)); 
       if(resAction.have_property && resAction.have_property.length) {
-        resultHaveProperty.concat(resAction.have_property);
+        resultHaveProperty = resultHaveProperty.concat(resAction.have_property);
       }
       if(resAction.not_have_property && resAction.not_have_property.length) {
-        resultNotHaveProperty.concat(resAction.not_have_property);
+        resultNotHaveProperty = resultNotHaveProperty.concat(resAction.not_have_property);
       }
       ruleResultMap[ruleId] = resCondition;
     }
+    console.log("------results to be pushed---");
+    console.log("------have_property---");
+    console.log(JSON.stringify(resultHaveProperty));
+    console.log("-----not have property-------");
+    console.log(JSON.stringify(resultNotHaveProperty));
     resultMap[data.id] = {
       metaRules: ruleResultMap,
       have_property: resultHaveProperty && resultHaveProperty.length ? resultHaveProperty : undefined,
@@ -346,6 +374,7 @@ fakeData.prototype.generateResults = function() {
     };
 
   }
+  self.resultMap = resultMap;
 };
 
 fakeData.prototype.applyConditions = function(data, ruleId) {
@@ -354,27 +383,38 @@ fakeData.prototype.applyConditions = function(data, ruleId) {
   if(!ruleObj || !ruleObj.length) {
     return undefined;
   }
+  console.log("-----ruleObject found----");
+  console.log(JSON.stringify(ruleObj));
   
   var ruleOperator = ruleObj[0].conditionsOperator;
-  var tocheck; 
+  var tocheck = false; 
   switch(ruleOperator) {
     case '&&': tocheck = false;
                 break;
     case '||': tocheck = true;
                 break; 
   }
-
+  console.log("---tocheck set----");
+  console.log(tocheck);
   var conditions = self.ruleConditionMap[ruleId];
   if(!conditions || Object.keys(conditions).length === 0) {
     return undefined;
   }
+  console.log("----conditions to run----");
+  console.log(JSON.stringify(conditions));
   var ids = Object.keys(self.ruleConditionMap[ruleId]);
+  console.log("--condition ids to check--");
+  console.log(ids);
   var initial = false;
   var conditionsRes = {};
   for(var index = 0; index < ids.length; index++) {
     var condition = self.ruleConditionMap[ruleId][ids[index]];
+    console.log("------condition processing now-----");
+    console.log(JSON.stringify(condition));
     var res = self.processCondition(data, condition);
     conditionsRes[ids[index]] = res;
+    console.log("---result for this condition---");
+    console.log(JSON.stringify(conditionsRes[ids[index]]));
     if(res === tocheck) {
       initial = res;
       break;
@@ -395,7 +435,7 @@ fakeData.prototype.applyConditions = function(data, ruleId) {
     total_conditions: ids.length,
     applied: initial,
     actions: {},
-    total_actions: Object.keys(self.ruleActionMap[ruleId])
+    total_actions: Object.keys(self.ruleActionMap[ruleId]).length
   };
 };
 
@@ -466,6 +506,8 @@ fakeData.prototype.processTime = function(data, condition, rangebool) {
   var range = String(condition.value).split('~').map(function(val) {
     return val.trim();
   });
+  console.log("-----range to process----");
+  console.log(JSON.stringify(range));
   var minTime = getFullTime(range[0]);
   var maxTime = getFullTime(range[1]);
   var val = getFullTime(data[condition.key]);
@@ -482,6 +524,7 @@ module.exports = fakeData;
    if (require.main == module ) {
     var fake = new fakeData();
     fake.init();
+    //console.log(getFullTime("05:00:00"));
     //fake.randomRules = [{"rule":{"id":3,"name":"Random Test #3","priority":18580,"conditionsOperator":"&&"},"rule_condition":{"id":3,"key":"integer","operation":"!timerange","value":"01:00:00"},"rule_action":{"id":2,"action":"SET_VARIABLE","key":"eos","value":43232}},{"rule":{"id":3,"name":"Random Test #3","priority":18580,"conditionsOperator":"&&"},"rule_condition":{"id":3,"key":"integer","operation":"!timerange","value":"01:00:00"},"rule_action":{"id":2,"action":"SET_VARIABLE","key":"eos","value":43232}},{"rule":{"id":2,"name":"Random Test #2","priority":11965,"conditionsOperator":"&&"},"rule_condition":{"id":2,"key":"dateTimeInput","operation":"timerange","value":"10:00:00"},"rule_action":{"id":2,"action":"SET_VARIABLE","key":"illo","value":99651}},{"rule":{"id":2,"name":"Random Test #2","priority":11965,"conditionsOperator":"&&"},"rule_condition":{"id":2,"key":"dateTimeInput","operation":"timerange","value":"10:00:00"},"rule_action":{"id":2,"action":"SET_VARIABLE","key":"illo","value":99651}},{"rule":{"id":2,"name":"Random Test #2","priority":31211,"conditionsOperator":"&&"},"rule_condition":{"id":2,"key":"integer","operation":"timerange","value":"05:00:00"},"rule_action":{"id":3,"action":"SET_VARIABLE","key":"quia","value":39237}},{"rule":{"id":2,"name":"Random Test #2","priority":31211,"conditionsOperator":"&&"},"rule_condition":{"id":2,"key":"integer","operation":"timerange","value":"05:00:00"},"rule_action":{"id":3,"action":"SET_VARIABLE","key":"quia","value":39237}}];
     //console.log(fake.findRule(2));
     //console.log(fake.getRandomTime());
