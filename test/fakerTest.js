@@ -21,27 +21,27 @@ function fakeData(config, opts) {
 
     self.basicOperators = ['+','-','/','*'];
 
-    self.keyOps = ['integer','dateTimeInput','timeInput']; //rangeInput to be added
+    self.keyOps = ['integer'];//,'dateTimeInput','timeInput']; //rangeInput to be added
 
     //self.operations = ['numOperators', 'stringOperators'];
 
     self.actions = ['SET_VARIABLE', 'DANGEROUS_EVAL'];
 
-    self.minRules = 2;//100;
+    self.minRules = 200;
 
-    self.maxRules = 2;//1000;
+    self.maxRules = 300;
 
-    self.minInputs = 2;//50;
+    self.minInputs = 40;
 
-    self.maxInputs = 2;//100;    
+    self.maxInputs = 50;    
 
-    self.minConditions = 1;//3;
+    self.minConditions = 5;
 
-    self.maxConditions = 2;//5;
+    self.maxConditions = 6;
 
-    self.minActions = 1;
+    self.minActions = 2;
 
-    self.maxActions = 2;//4;
+    self.maxActions = 3;
 
     self.randomData = [];
 
@@ -69,8 +69,16 @@ function getRandomBoolean() {
   return faker.random.boolean();
 }
 
+var checked = {};
+
 function getRandomWord() {
-  return faker.lorem.word();
+  var word = faker.name.firstName() + faker.lorem.word() + String(getRandomNumber()) + faker.name.firstName() + faker.lorem.word() + String(getRandomNumber());
+  if(checked[word]) { 
+    return getRandomWord();
+  } else {
+    checked[word] = 1;
+    return word;
+  }
 }
 
 function getRandomArrayElement(arr) {
@@ -123,22 +131,13 @@ fakeData.prototype.init = function() {
   self.setRandomNumberofInput();
 
   self.generateRandomInput();
-  /*****************Random Input *****************/
-  console.log("-------Number of inputs and Random input---------");
-  console.log(self.numberOfInputs);
-  console.log(JSON.stringify(self.randomData))
 
   self.setRandomNumberofRules();
 
   self.generateRandomRules();
-  console.log("-------Number of rules and Random rules---------");
-  console.log(self.numberOfRules);
-  console.log(JSON.stringify(self.randomRules))
 
   self.generateResults();
-  console.log("------The results are------");
-  console.log(JSON.stringify(self.resultMap));
-
+  
   return {
     rules: self.randomRules,
     resultMap: self.resultMap,
@@ -289,7 +288,7 @@ fakeData.prototype.getRandomCondition = function() {
                     break;
   }
   conditionObj.operation = getRandomArrayElement(self[operation]);
-  conditionObj.value = self.getRandomConditionValue(conditionObj.operation);
+  conditionObj.value = String(self.getRandomConditionValue(conditionObj.operation));
   return conditionObj; 
 }
 
@@ -332,8 +331,8 @@ fakeData.prototype.generateResults = function() {
   var resultMap = {};
   
   var ruleIds = Object.keys(self.ruleConditionMap);
-  console.log("----rule ids are---");
-  console.log(ruleIds);
+  //console.log("----rule ids are---");
+  //console.log(ruleIds);
   for(var index = 0; index < self.numberOfInputs; index++) {
     var data = self.randomData[index];
     var resultHaveProperty = [];
@@ -341,19 +340,19 @@ fakeData.prototype.generateResults = function() {
     var ruleResultMap = {};
     for(var rule_index = 0; rule_index < ruleIds.length; rule_index++) {
       var ruleId = ruleIds[rule_index];
-      console.log("-----ruleId to process------");
-      console.log(ruleId);
+      //console.log("-----ruleId to process------");
+      //console.log(ruleId);
       var resCondition = self.applyConditions(data, ruleId);
-      console.log("-------applied Condition for ruleId----" + ruleId);
-      console.log(JSON.stringify(resCondition));
+      //console.log("-------applied Condition for ruleId----" + ruleId);
+      //console.log(JSON.stringify(resCondition));
       if(!resCondition) {
         continue;
       }
       
       //Check if action to be applied
       var resAction = self.applyActions(data, ruleId, resCondition);
-      console.log("-----res form action----");
-      console.log(JSON.stringify(resAction)); 
+      //console.log("-----res form action----");
+      //console.log(JSON.stringify(resAction)); 
       if(resAction.have_property && resAction.have_property.length) {
         resultHaveProperty = resultHaveProperty.concat(resAction.have_property);
       }
@@ -362,11 +361,7 @@ fakeData.prototype.generateResults = function() {
       }
       ruleResultMap[ruleId] = resCondition;
     }
-    console.log("------results to be pushed---");
-    console.log("------have_property---");
-    console.log(JSON.stringify(resultHaveProperty));
-    console.log("-----not have property-------");
-    console.log(JSON.stringify(resultNotHaveProperty));
+    
     resultMap[data.id] = {
       metaRules: ruleResultMap,
       have_property: resultHaveProperty && resultHaveProperty.length ? resultHaveProperty : undefined,
@@ -383,38 +378,29 @@ fakeData.prototype.applyConditions = function(data, ruleId) {
   if(!ruleObj || !ruleObj.length) {
     return undefined;
   }
-  console.log("-----ruleObject found----");
-  console.log(JSON.stringify(ruleObj));
   
-  var ruleOperator = ruleObj[0].conditionsOperator;
+  var ruleOperator = ruleObj[0].rule.conditionsOperator;
   var tocheck = false; 
+  
   switch(ruleOperator) {
     case '&&': tocheck = false;
                 break;
     case '||': tocheck = true;
                 break; 
   }
-  console.log("---tocheck set----");
-  console.log(tocheck);
+
   var conditions = self.ruleConditionMap[ruleId];
   if(!conditions || Object.keys(conditions).length === 0) {
     return undefined;
   }
-  console.log("----conditions to run----");
-  console.log(JSON.stringify(conditions));
+
   var ids = Object.keys(self.ruleConditionMap[ruleId]);
-  console.log("--condition ids to check--");
-  console.log(ids);
   var initial = false;
   var conditionsRes = {};
   for(var index = 0; index < ids.length; index++) {
     var condition = self.ruleConditionMap[ruleId][ids[index]];
-    console.log("------condition processing now-----");
-    console.log(JSON.stringify(condition));
     var res = self.processCondition(data, condition);
     conditionsRes[ids[index]] = res;
-    console.log("---result for this condition---");
-    console.log(JSON.stringify(conditionsRes[ids[index]]));
     if(res === tocheck) {
       initial = res;
       break;
@@ -506,8 +492,6 @@ fakeData.prototype.processTime = function(data, condition, rangebool) {
   var range = String(condition.value).split('~').map(function(val) {
     return val.trim();
   });
-  console.log("-----range to process----");
-  console.log(JSON.stringify(range));
   var minTime = getFullTime(range[0]);
   var maxTime = getFullTime(range[1]);
   var val = getFullTime(data[condition.key]);

@@ -13,16 +13,11 @@ var re = new ykw();
 
 function test() {
     faker();
-    // var choice = process.argv[2];
-    // if(!choice) {
-    //     console.log("Which test method you want to run?");
-    //     console.log("Run as: mocha test [manual/faker]");
-    //     return;
-    // }
-    // choice();
 }
 
+
 function faker() {
+
     var randomTests = new fake();
     var testInfo = randomTests.init();
     var rules = testInfo.rules;
@@ -40,64 +35,56 @@ function faker() {
 
     start = Date.now();
 
-    describe("Random Test Suite" , function () {
-        
-        before(function() {
-            re.loadRules(rules);
-        });
+    console.log ("Loading test rules...");
 
-        //for(var index = 0; index < messages.length; index++) {
-            var index = 0;
-            describe("Test Suite " + String(index+1), function(){
-                it("Should pass for eligible criteria...", function (done){
-                    var message = messages[index];
-                    re.applyRules(function(reMetaData){
-                        
-                        ["have_property", "not_have_property"].forEach(function(property) {
-                            if(results[message.id][property]) {
-                                var props = results[message.id][property];
-                                props.forEach(function(checks){
-                                    if(property == "have_property") {
-                                        should(message).have.property(props.key, props.value);
-                                    } else {
-                                        should(message).not.have.property(props.key, props.value);
-                                    }
-                                })
-                            }
-                        });
-                        
+    re.loadRules(rules);
 
-                        should(reMeta).have.property('ts');
+    messages.forEach(function(message, index) {
+        describe("Test Suite " + String(index+1), function(){
+            it("Should pass for eligible criteria...", function (done){
+                console.log(JSON.stringify(message));
+                re.applyRules(function(reMeta){
+                    
+                    ["have_property", "not_have_property"].forEach(function(property) {
+                        if(results[message.id][property]) {
+                            var props = results[message.id][property];
+                            props.forEach(function(checks){
+                                if(property == "have_property") {
+                                    should(message).have.property(checks.key, checks.value);
+                                } else {
+                                    should(message).not.have.property(checks.key, checks.value);
+                                }
+                            })
+                        }
+                    });
+                    
 
-                        should(reMeta.ts).have.property('rules_loaded');
-                        should(reMeta.ts.rules_loaded).be.a.Number();
+                    should(reMeta).have.property('ts');
 
-                        should(reMeta.ts).have.property('start');
-                        should(reMeta.ts.start).be.a.Number();
+                    should(reMeta.ts).have.property('rules_loaded');
+                    should(reMeta.ts.rules_loaded).be.a.Number();
 
-                        should(reMeta.ts).have.property('end');
-                        should(reMeta.ts.end).be.a.Number();
+                    should(reMeta.ts).have.property('start');
+                    should(reMeta.ts.start).be.a.Number();
+
+                    should(reMeta.ts).have.property('end');
+                    should(reMeta.ts.end).be.a.Number();
 
 
-                        should(reMeta).have.property('ruleEngineHash');
-                        should(reMeta.ruleEngineHash).be.a.String();
+                    should(reMeta).have.property('ruleEngineHash');
+                    should(reMeta.ruleEngineHash).be.a.String();
 
-                        should(reMeta).have.property('rules');
+                    should(reMeta).have.property('rules');
+                    //should.deepEqual(reMeta.rules, results[message.id].metaRules);
+                    if(index == (messages.length-1)) {
+                        finish = Date.now();
+                        console.log("\nTotal time taken to run this testsuite: " + String((finish-start)/1000) + " seconds");
+                    }
+                    done();
+                }, message);        
 
-                        should.deepEqual(reMeta.rules, results[message.id].metaRules);
-
-                        done();
-                    }, message);        
-
-                });
             });
-        //}*/
-
-        finish = Date.now();
-
-        console.log("Total time taken to finish the testsuite: " + String((finish-start)/1000) + " seconds");
-        console.log("Randome test suite completed!!!");
-
+        });
     });
 
 }
