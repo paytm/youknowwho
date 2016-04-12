@@ -1,0 +1,81 @@
+The idea of making the rule engine async was to be able to execute custom functions within the rule engine ...
+
+
+Thought :
+    Introduce a list of executable fns to the rule engine ... this list looks something like :
+
+    module.exports = {
+      "parse_json" : function (callback, string) {
+      },
+      "get_dob" : function (callback, first_name, age) {
+      }
+    }
+
+    Introduce a new action called "exec" ...
+    The actions key will be one of the functions defined in the list of executables above ....
+
+
+    The exec action will be captured by a wrapper function which takes only 3 arguments
+    callback, message, argument_keys ...
+
+    These argument keys are essentialy the list of values that have to be extracted from the message
+    and passed to the one of the functions in the list ....
+
+    Example :
+
+    if exec action has its key set as parse_json , the value of action will contain the argument from which
+    this "String" will be picked from the message :
+
+
+    message -> {
+      "name" : '{"first" : "A", "last" : "B"}',
+      "age"  : 50
+    }
+
+    action -> exec
+    key    -> "parse_json"
+    value  -> "name"
+
+
+    the wrapper functions arguments become (callback, message, "name")
+
+    Multiple values to the list of executables can be comma seperated ....
+
+    action -> exec
+    key    -> "get_dob"
+    value  -> "name.first, age"
+
+    the wrapper function will now extract these values from the message and pass to one of the
+    functions in the list of executables ....
+
+
+
+    As a standard , each function will return value would be set by the wrapper function
+    in the function name space .... example :
+
+    parse_json :
+
+    message.exec_info.parse_json = {
+      "value" : {"first" : "A", "last": "B"}
+    }
+
+    get_dob :
+
+    message.exec_info.get_dob    = {
+    "value" : "18/03/2016"
+    }
+
+
+    Incase of an error , this is set in the same namespace of the function under the key error :
+
+    message.exec_info.parse_json = {
+      "error" : "SyntaxError: Unexpected token o"
+    }
+
+    The verbosity of this error depends upon the function itself .... The wrapper function will just set its value .
+
+
+    The list of executables "this" has to be set by the client ....
+
+    This "this" can contain a list of db connections , npm modules etc from the app thereby offloading logic from the list of executables
+    and keeping them independent.

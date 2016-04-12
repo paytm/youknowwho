@@ -6,6 +6,10 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "apidoc": {
+    "title": "YKW api doc",
+    "url": "http://localhost:2929"
+  },
   "repository": {
     "type": "git",
     "url": "git://github.com/paytm/youknowwho.git"
@@ -22,13 +26,20 @@
   },
   "homepage": "https://github.com/paytm/youknowwho",
   "dependencies": {
+    "body-parser": "^1.15.0",
+    "commander": "^2.9.0",
+    "express": "^4.13.4",
+    "lgr": "git://github.com/paytm/lgr.git#v0.0.10",
     "lodash": "~3.10.1",
     "moment": "~2.10.6",
-    "tiny-range-binarysearch": "https://github.com/paytm/tiny-range-binarysearch.git",
+    "path": "^0.12.7",
+    "tiny-range-binarysearch": "git+https://github.com/paytm/tiny-range-binarysearch.git",
     "validator": "^4.2.1"
   },
   "devDependencies": {
+    "apidoc": "^0.15.1",
     "mocha": "~2.3.3",
-    "should": "^8.2.2"
+    "should": "^8.2.2",
+    "supertest": "^1.2.0"
   }
 }
