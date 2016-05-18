@@ -24,6 +24,9 @@
   "bugs": {
     "url": "https://github.com/paytm/youknowwho/issues"
   },
+  "scripts": {
+    "test": "mocha test"
+  },
   "homepage": "https://github.com/paytm/youknowwho",
   "dependencies": {
     "body-parser": "^1.15.0",

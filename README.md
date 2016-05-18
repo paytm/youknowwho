@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/paytm/youknowwho.svg?branch=master)](https://travis-ci.org/paytm/youknowwho)
+
 # youknowwho
 Rule engine for most of generic decisions and flow control ... Gui will follow soon
 
@@ -103,7 +105,7 @@ function custom(callback, arg) {
  - Each function's 1st argument will be the callback it is expected to call once its execution is over.
  - There is no differentiation in blocking and non-blocking functions, and also in sync and async functions, since we are anyway passing a callback.
 
- - **arg** : arg is the argument which can be passed to function by previous rules/actions. Each message will have a key :=> **msg.__execargs__** which will have key for each function. E.g. if user wishes to pass an object as an argument to function *f1* , it will set it in **msg.__execargs__.f1** .
+ - **arg** : arg is the argument which can be passed to function by previous rules/actions. Each message will have a key :=> **msg.__execargs__** which will have key for each function. E.g. if user wishes to pass an object as an argument to function *f1* , it will set it in **msg.__execargs__.f1** . **NOTE** : At the end , __execargs__ key will be deleted from message, hence try not to put anything of persistence there.
 
  - **function context** : Rule engine will expose a *execContext* which will be the object which will hold all function definitions and will be supplied as the context (this) in function execution.
 
