@@ -444,9 +444,15 @@ YKW.prototype.applyRules = function(msg, tag) {
                 // see conditions operator and decide what final decision is
                 if(eachRule.conditionsOperator == R_OPERATORS.AND) {
                     finalDecision = finalDecision && cDecision;
+
+                    // Optimized check . In case of && any condition being false should be enough to decide
+                    if (finalDecision === false) break;
                 }
                 else if(eachRule.conditionsOperator == R_OPERATORS.OR) {
                     finalDecision = finalDecision || cDecision;
+
+                    // Optimized check . In case of || any condition being true should be enough to decide
+                    if (finalDecision === true) break;
                 }
                 else { //for handling complex functions
                     _.set(compiledObj,iCondition,cDecision);
@@ -457,10 +463,7 @@ YKW.prototype.applyRules = function(msg, tag) {
         } // Each condition is a rule
 
 
-        /*
-            Actions in Rule .. Check if they can be applied ...
-         */
-
+        // Only if condition operator is complex
         if (eachRule.conditionsOperator != R_OPERATORS.AND && eachRule.conditionsOperator != R_OPERATORS.OR) {
             // Example : _.template(' <%= c[0] %> && <%= c[1] %> || <%= c[2] %> && <%= c[3] %>')
             finalDecision = eval(eachRule.conditionsOperator({'c': compiledObj }));

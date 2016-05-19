@@ -1,13 +1,17 @@
 "use strict";
 
+/*
+    Pending tests
+    - For Issue #1 , #16
 
-var should = require("should");
 
-var ykw = require('../');
+*/
 
-var reData     = require('./ruleDataSet');
-
-var re = new ykw();
+var
+    should      = require("should"),
+    ykw         = require('../'),
+    reData      = require('./ruleDataSet'),
+    re          = new ykw();
 
 
 describe("Rule Engine Test Suite" , function () {
