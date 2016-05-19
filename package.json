@@ -1,14 +1,10 @@
 {
   "name": "youknowwho",
   "version": "0.0.7",
-  "description": "Rule engine for most of generic decision makings ... Gui will follow soon",
+  "description": "Rule engine for most of generic decision makings",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "apidoc": {
-    "title": "YKW api doc",
-    "url": "http://localhost:2929"
+    "test": "mocha test"
   },
   "repository": {
     "type": "git",
@@ -24,25 +20,14 @@
   "bugs": {
     "url": "https://github.com/paytm/youknowwho/issues"
   },
-  "scripts": {
-    "test": "mocha test"
-  },
   "homepage": "https://github.com/paytm/youknowwho",
   "dependencies": {
-    "body-parser": "^1.15.0",
-    "commander": "^2.9.0",
-    "express": "^4.13.4",
-    "lgr": "git://github.com/paytm/lgr.git#v0.0.10",
     "lodash": "~3.10.1",
     "moment": "~2.10.6",
-    "path": "^0.12.7",
     "tiny-range-binarysearch": "git+https://github.com/paytm/tiny-range-binarysearch.git",
     "validator": "^4.2.1"
   },
   "devDependencies": {
-    "apidoc": "^0.15.1",
-    "mocha": "~2.3.3",
-    "should": "^8.2.2",
-    "supertest": "^1.2.0"
+    "mocha": "~2.3.3"
   }
 }
