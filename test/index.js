@@ -16,10 +16,8 @@ describe("Rule Engine Test Suite" , function () {
         var message = {
             "integer" : 1
         };
-
-        re.applyRules(function (reMeta) {
-            done();
-        }, message);
+        re.applyRules(message);
+        done();
 
 
     });
@@ -45,49 +43,12 @@ describe("Basic Operator Test Suite", function () {
             };
 
             // Tags to ensure independent spaces for test cases
-            re.applyRules(function (reMeta) {
+            re.applyRules(message);
 
-                // Normal Rule check ...
-                should(message).have.property('is_natural', 1);
+            // Normal Rule check ...
+            should(message).have.property('is_natural', 1);
 
-                // Meta Object checks
-
-                should(reMeta).have.property('ts');
-
-                should(reMeta.ts).have.property('rules_loaded');
-                should(reMeta.ts.rules_loaded).be.a.Number();
-
-                should(reMeta.ts).have.property('start');
-                should(reMeta.ts.start).be.a.Number();
-
-                should(reMeta.ts).have.property('end');
-                should(reMeta.ts.end).be.a.Number();
-
-
-                should(reMeta).have.property('ruleEngineHash');
-                should(reMeta.ruleEngineHash).be.a.String();
-
-                should(reMeta).have.property('rules');
-
-                // Would like assertions / deep object comparison now
-
-                should.deepEqual(reMeta.rules,
-
-                                 {
-                                     "1": {
-                                         "conditions": {
-                                             "1": true
-                                         },
-                                         "total_conditions": 1,
-                                         "actions": {},
-                                         "total_actions": 1,
-                                         "applied": true
-                                     }
-                                 });
-                done();
-
-            }, message,'natural');
-
+            done();
 
         });
 
@@ -99,47 +60,12 @@ describe("Basic Operator Test Suite", function () {
 
 
             // Tags to ensure independent spaces for test cases
-            re.applyRules(function (reMeta) {
-                // Normal Rule check ...
+            re.applyRules(message);
+            // Normal Rule check ...
 
-                should(message).not.have.property('is_natural');
+            should(message).not.have.property('is_natural');
 
-                // Meta Object checks
-
-                should(reMeta).have.property('ts');
-
-                should(reMeta.ts).have.property('rules_loaded');
-                should(reMeta.ts.rules_loaded).be.a.Number();
-
-                should(reMeta.ts).have.property('start');
-                should(reMeta.ts.start).be.a.Number();
-
-                should(reMeta.ts).have.property('end');
-                should(reMeta.ts.end).be.a.Number();
-
-
-                should(reMeta).have.property('ruleEngineHash');
-                should(reMeta.ruleEngineHash).be.a.String();
-
-                should(reMeta).have.property('rules');
-
-                // Would like assertions / deep object comparison now
-
-                should.deepEqual(reMeta.rules,
-                                 {
-                                     "1": {
-                                         "conditions": {
-                                             "1": false
-                                         },
-                                         "total_conditions": 1,
-                                         "actions": {},
-                                         "total_actions": 1,
-                                         "applied": false
-                                     }
-                                 });
-                done();
-
-            }, message,'natural');
+            done();
         });
 
 
@@ -151,48 +77,12 @@ describe("Basic Operator Test Suite", function () {
 
 
             // Tags to ensure independent spaces for test cases
-            re.applyRules(function (reMeta) {
-                // Normal Rule check ...
+            re.applyRules(message);
+            // Normal Rule check ...
 
-                should(message).not.have.property('is_natural');
+            should(message).not.have.property('is_natural');
 
-                // Meta Object checks
-
-                should(reMeta).have.property('ts');
-
-                should(reMeta.ts).have.property('rules_loaded');
-                should(reMeta.ts.rules_loaded).be.a.Number();
-
-                should(reMeta.ts).have.property('start');
-                should(reMeta.ts.start).be.a.Number();
-
-                should(reMeta.ts).have.property('end');
-                should(reMeta.ts.end).be.a.Number();
-
-
-                should(reMeta).have.property('ruleEngineHash');
-                should(reMeta.ruleEngineHash).be.a.String();
-
-                should(reMeta).have.property('rules');
-
-                // Would like assertions / deep object comparison now
-
-                should.deepEqual(reMeta.rules,
-                                 {
-                                     "1": {
-                                         "conditions": {
-                                             "1": false
-                                         },
-                                         "total_conditions": 1,
-                                         "actions": {},
-                                         "total_actions": 1,
-                                         "applied": false
-                                     }
-                                 });
-
-                done();
-
-            }, message,'natural');
+            done();
 
         });
 
