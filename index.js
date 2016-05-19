@@ -13,7 +13,6 @@ var
 
     /* NPM Third Party */
     _                   = require('lodash'),
-    Q                   = require('q'),
     MOMENT              = require('moment'),
     RANGE               = require('./lib/tinyRange'),
     VALIDATOR           = require('validator'),
