@@ -4,7 +4,7 @@
   "description": "Rule engine for most of generic decision makings",
   "main": "index.js",
   "scripts": {
-    "test": "mocha test"
+    "test": "istanbul cover _mocha -- -R spec"
   },
   "repository": {
     "type": "git",
@@ -22,13 +22,16 @@
   },
   "homepage": "https://github.com/paytm/youknowwho",
   "dependencies": {
-    "lodash": "~3.10.1",
+    "lodash": "^4.12.0",
     "moment": "~2.10.6",
     "tiny-range-binarysearch": "git+https://github.com/paytm/tiny-range-binarysearch.git",
     "validator": "^4.2.1"
   },
   "devDependencies": {
+    "coveralls": "^2.11.9",
+    "istanbul": "^0.4.3",
     "mocha": "~2.3.3",
+    "mocha-lcov-reporter": "^1.2.0",
     "should": "^8.3.2"
   }
 }

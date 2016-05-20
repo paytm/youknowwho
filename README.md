@@ -1,8 +1,8 @@
-[![Build Status](https://travis-ci.org/paytm/youknowwho.svg?branch=master)](https://travis-ci.org/paytm/youknowwho)
-
 # youknowwho
 Rule engine for most of generic decisions and flow control ... Gui will follow soon
 
+[![Build Status](https://travis-ci.org/paytm/youknowwho.svg?branch=master)](https://travis-ci.org/paytm/youknowwho)
+[![Coverage Status](https://coveralls.io/repos/github/paytm/youknowwho/badge.svg?branch=master)](https://coveralls.io/github/paytm/youknowwho?branch=master)
 
 # Opts to instantiate
 - *debug*         : BOOLEAN . Will start emitting Debug Events. NOTE : Will SLOW DOWN the rule engine since Event Emitter is panifully Slow. ( Tag 0.0.7 ) UPDATED : wont emit debug logs anymore
@@ -141,11 +141,6 @@ loaded_hash = ruleEngineObject.loadRules(arrayOfRules);
 */
 ```
 
-Specifying context of custom user-defined functions
-```
-ruleEngineObject.setExecContext(execObject);
-
-```
 
 Applying Rules
 ```
