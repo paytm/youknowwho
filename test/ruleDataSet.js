@@ -21,12 +21,13 @@ var rules = [
         value: '0'
     },
     rule_action: {
-        id: 1,
+        id: 2,
         action: 'SET_VARIABLE',
         key: 'is_natural',
         value: 1
     }
 },
+// rule with no conditions
 {
     rule: {
         id: 2,
@@ -39,13 +40,13 @@ var rules = [
         tags: 'exec'
     },
     rule_condition: {
-        id: null,
-        key: null,
-        operation: null,
-        value: null
+        id: 3,
+        key: 'integer',
+        operation: '>',
+        value: '0'
     },
     rule_action: {
-        id     : 2,
+        id     : 4,
         action : "EXEC",
         key    : "parse_json",
         value  : "name"

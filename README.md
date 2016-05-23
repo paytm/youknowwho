@@ -78,7 +78,7 @@ Each Action will have 3 parts
 
 1.  **Action** : Possible options are
 > + **Set Variable** ==> Sets a variable in the source message
-> + **Stop Processing more rules** ==> Stop Processing more rule/action after this action
+> + **Stop Processing more rules** ==> Stop Processing more rule/action after this action. NOTE : This will process all actions of the rule which is being processed, and will exit after that. This will NOT stop the next action. Hence it should ideally be the last action of a rule.
 > + **DANGEROUS_EVAL** ==> This will 'eval' the key and overwrite it.
 > + **Execute custom functions** ==> This will execute a user defined functions in a set way with guidelines
 
@@ -157,36 +157,44 @@ meta_object = ruleEngineObject.applyRules(msg, ruletag);
 
 
 ### Rule Engine Hash ( loaded_hash )
-This calculates a hash of loaded rules , which helps in audit. This is a simple SHA1 hash.
+This calculates a hash of loaded rules , which helps in audit. This is a simple md5 hash.
 
 ### Meta Object
 Meta object saves the state of each rule , condition and action with variups required timestamps. It is not in the scope of this project to analyze the performace/metrics of the engine/rules.
 This can help in re-arranging conditions, removing redundant /slow rules, etc. . Idea should be to minimize the number of conditions/rules for each message.
 Schema of meta object
 
+Rules, conditions and actions are dictionary based to have easy accessibility
+
 ```sh
-    _meta : {
-        "ts" : {
-            "rules_loaded" : dateTime Object,
-            "start" : dateTime Object,
-            "end"   : dateTime Object
-        },
-        "ruleEngineHash" : "" // ToDo : so That we should be able to TAG the appropriate hash code with Rule Engine version
-
-        "rules" : {
-           "r1" : {
-                "conditions" : {
-                    "c1"    : true,
-                    "c2"    : false
-                },
-                "applied"   : true,
-
-                "actions"   : {
-
+    {
+    "rules": { // Rules object, each key: val is rule id : data
+        "1": { // rule ID
+            "ruleid": 1, // rule id
+            "exec_order": 1, // Execution order of rules by RE. starts with 0
+            "conditions": { // conditions object
+                "1": { // condition ID
+                    "cid": 1, // condition ID
+                    "lval": -1, // Left value of condition
+                    "op": ">", // Operation applied
+                    "rval": "0", // Right value of operation
+                    "d": false // decision for this condition
                 }
-           }
-       }
-    }
+            },
+            "applied": false, // Rules was applied or not
+            "actions": {} // actions
+        },
+    },
+    "rules_load": {
+        "hash": "feb65a88a9f346494ad5a12de14dc7ec", // hash of loaded rules
+        "load_start": "1463996594477", // Rules load start time
+        "load_end": "1463996594479", // Rules loading end time
+        "load_exec_time": 2 // milliseconds for rule loading
+    },
+    "startTime": "1463996594492", // start time of RE execution
+    "endTime": "1463996594494", // end time ( Unix Milliseconds )
+    "execTime": 2 //exec time for RE
+}
 ```
 
 

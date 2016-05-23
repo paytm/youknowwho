@@ -9,6 +9,7 @@ var
     /* NODE internal */
     UTIL                = require('util'),
     PATH                = require('path'),
+    CRYPTO              = require('crypto'),
 
     /* NPM Third Party */
     _                   = require('lodash'),
@@ -69,6 +70,11 @@ var
 function YKW(opts) {
     var self = this;
     self.opts = opts;
+
+    /* declare common Meta, for each msg we will use cloneDeep*/
+    self.masterMeta = {
+        "rules" : {},
+    };
 }
 
 
@@ -305,7 +311,13 @@ YKW.prototype.applyRules = function(msg, tag) {
 
     var
         self                = this,
+        startTime           = MOMENT(),
+        endTime             = null,
+        msgMeta                = _.cloneDeep(self.masterMeta),
         listofActiveRules   = null;
+
+    // Meta , catching the start time
+    msgMeta.startTime = startTime.format('x');
 
     // Load only rules from that tag or all rules
     if(tag)     listofActiveRules = self.tagsRuleMap[tag];
@@ -320,6 +332,8 @@ YKW.prototype.applyRules = function(msg, tag) {
         var
             eachRule            = listofActiveRules[iRule],
 
+            ruleMeta            = {"ruleid" : eachRule.id, 'exec_order' : iRule, 'conditions' : {}, 'applied' : null, 'actions': {} },
+
             /*
                 finalDecision : null
 
@@ -331,6 +345,8 @@ YKW.prototype.applyRules = function(msg, tag) {
             finalDecision       = null,
             compiledObj         = {};
 
+        // Add in Meta
+        msgMeta.rules[eachRule.id] = ruleMeta;
 
         /*
             Conditions in RUle
@@ -341,14 +357,23 @@ YKW.prototype.applyRules = function(msg, tag) {
                 // each condition
                 eachCondition   = eachRule.conditions[iCondition],
 
+                // condition meta
+                condMeta        = {"cid" : eachCondition.id },
+
                 // Get Key from message
                 msgValue        = _.get(msg, eachCondition.key, null),
 
                 // Get condition value
                 condValue       = eachCondition.value,
 
+                // per condition decision
+                cDecision       = null,
+
                 op              = eachCondition.operation;
 
+
+            // Add in Meta
+            ruleMeta.conditions[eachCondition.id] = condMeta;
 
             /*
              Okay , so condition value can be either a static string or can be a lodash template
@@ -364,11 +389,15 @@ YKW.prototype.applyRules = function(msg, tag) {
                 condValue = self._parseCondition(condValue);
             }
 
-            var cDecision       = self.__checkOperation(op, msgValue, condValue);
+            // Meta
+            condMeta.lval = msgValue;
+            condMeta.op = op;
+            condMeta.rval = condValue;
 
-            /* This is for Rule Trails , mostly for Debug */
-            // msg.logs += UTIL.format('C:%s:%s:%s ', eachRule.id, iCondition, (cDecision ? 'T' : 'F'));
+            cDecision = self.__checkOperation(op, msgValue, condValue);
 
+            // Meta
+            condMeta.d = cDecision;
 
             /* Check if 1st condition */
             if(iCondition === 0)    finalDecision = cDecision;
@@ -402,6 +431,9 @@ YKW.prototype.applyRules = function(msg, tag) {
             finalDecision = eval(eachRule.conditionsOperator({'c': compiledObj }));
         }
 
+        // Add final Decision in Meta
+        ruleMeta.applied = finalDecision;
+
         /*
             When do we apply actions ?
                 If finaldecision is TRUE
@@ -412,10 +444,23 @@ YKW.prototype.applyRules = function(msg, tag) {
         // Apply each action for that rule
         for(var iAction = 0; iAction < eachRule.actions.length; iAction ++) {
 
+            var
+                eachAction   = eachRule.actions[iAction],
+
+                // action meta
+                actionMeta = {"aid" : eachAction.id };
+
+            // Add in Meta
+            ruleMeta.actions[eachAction.id] = actionMeta;
+
             /* This is for Rule Trails , mostly for Debug */
-            self._applyAction(msg, eachRule.actions[iAction], eachRule);
+            self._applyAction(msg, eachAction, eachRule, actionMeta);
         }
 
+        /*  It is assumed that this action will be the last Action .
+            This is mainly to quit Ruleengine pre-maturely and not to break list of actions
+            hence we are putting it outside of actions loop
+        */
         /* Exit Rule engine and do not execute any more rules */
         if( _.get(msg, R_ACTIONS.RE_EXIT, false) === true) {
 
@@ -426,14 +471,13 @@ YKW.prototype.applyRules = function(msg, tag) {
         }
     } // Each rule
 
-    /*
-        DONE...!!!!
+    // Meta , catching the end time
+    endTime = MOMENT();
+    msgMeta.endTime = endTime.format('x');
+    msgMeta.execTime = endTime.diff(startTime);
 
-        We have checked every rule against this message and have moved on
-        to applying actions here.
-    */
-
-    return msg;
+    // returning Meta instead of Msg ( which is written by reference)
+    return msgMeta;
 };
 
 /*
@@ -525,16 +569,19 @@ YKW.prototype.__toStringRange = function(refVal) {
 /*
    Apply Action
 */
-YKW.prototype._applyAction = function(msg, action, rule) {
+YKW.prototype._applyAction = function(msg, action, rule, actionMeta) {
     var
         self    = this,
         act     = _.get(action, "action", null);
+
+    //meta
+    actionMeta.action = act;
 
     switch(act) {
 
         // Set variable
         case R_ACTIONS.SET_VARIABLE : {
-            self.__applyActionSetVariable(msg, action, rule);
+            self.__applyActionSetVariable(msg, action, rule, actionMeta);
             break;
         }
 
@@ -546,7 +593,7 @@ YKW.prototype._applyAction = function(msg, action, rule) {
 
         // eval the expression
         case R_ACTIONS.DANGEROUS_EVAL : {
-            self.__applyActionDangerousEval(msg, action, rule);
+            self.__applyActionDangerousEval(msg, action, rule, actionMeta);
             break;
         }
 
@@ -558,31 +605,37 @@ YKW.prototype._applyAction = function(msg, action, rule) {
 /*
    Apply Action SET VARIABLE
 */
-YKW.prototype.__applyActionSetVariable = function(msg, action) {
+YKW.prototype.__applyActionSetVariable = function(msg, action, rule, actionMeta) {
     var
-        // key, value
         actKey          = action.key,
         actVal          = action.value;
 
     // Value can be a compiled function or a direct value
-    if(typeof actVal === "function")    _.set(msg,  actKey, actVal(msg));
-    else    _.set(msg,  actKey, actVal);
+    if(typeof actVal === "function") actVal = actVal(msg);
 
+    _.set(msg,  actKey, actVal);
+
+    // set Meta
+    actionMeta.key = actKey;
+    actionMeta.val = actVal;
 };
 
 /*
    Apply Action DANGEROUS_EVAL
 */
-YKW.prototype.__applyActionDangerousEval = function(msg, action) {
+YKW.prototype.__applyActionDangerousEval = function(msg, action, rule, actionMeta) {
     var
-        // key, value
-        actKey          = action.key;
+        actKey          = action.key,
+        actVal          = action.value;
 
     // JSHINT for eval
+    if (typeof action.value === "function") actVal = actVal(msg);
 
-    if (typeof action.value === "function") _.set(msg, actKey, eval(action.value(msg)));
-    else    _.set(msg,  actKey, eval(action.value));
+    _.set(msg,  actKey, eval(action.value));
 
+    // set Meta
+    actionMeta.key = actKey;
+    actionMeta.val = actVal;
 };
 
 
@@ -717,8 +770,17 @@ YKW.prototype.loadRules = function(r) {
               }
         }
     */
-        rule_map    = {};
+        rule_map    = {},
+        startTime   = MOMENT(),
+        endTime     = null,
 
+        hash        = CRYPTO.createHash('md5').update(JSON.stringify(r)).digest("hex");
+
+    // set HASH in meta
+    _.set(self.masterMeta, "rules_load.hash", hash);
+
+    // capture in Meta when were rules loaded
+    _.set(self.masterMeta, 'rules_load.load_start', startTime.format('x'));
 
     r.forEach(function (item) {
         /* HAck : to parse the value as true/false boolean
@@ -820,6 +882,12 @@ YKW.prototype.loadRules = function(r) {
         }
     }
 
+    // capture in Meta when were rules loaded
+    endTime = MOMENT();
+    _.set(self.masterMeta, 'rules_load.load_end', endTime.format('x'));
+    _.set(self.masterMeta, 'rules_load.load_exec_time', endTime.diff(startTime));
+
+    return hash;
 };
 
 module.exports = YKW;
