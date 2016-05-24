@@ -51,12 +51,14 @@ Each condition has 4 parts
 > ('range', 'In Numerical Range ( range )'),
 > ('!range', 'Not In Numerical Range ( !range )'),
 >
-> + E.g. : 2015-06-11 ~ 2015-07-12
+> + E.g. : 2015-06-11 00:00:00~ 2015-07-12 00:00:00
 > ('datetimerange', 'In DateTime Range (datetimerange )'),
 > ('!datetimerange', 'Not In DateTime Range (!datetimerange )'),
+> NOTE : ALWAYS specify datetime in YYYY-MM-DD HH:mm:ss format
 >
 > + ('timerange', 'In Time Range ( timerange )'),
 > ('!timerange', 'Not In Time Range ( !timerange )'),
+> NOTE : format HH:mm:ss~HH:mm:ss
 >
 > + ('regex', 'In Regex ( regex )'),
 > ('!regex', 'Not In Regex ( !regex)'),

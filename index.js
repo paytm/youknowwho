@@ -94,7 +94,8 @@ YKW.prototype.__checkDateTimeRange = function(momentArray, msgVal) {
     */
 
     // Check lesser value of range
-    msgVal = MOMENT(msgVal);
+    msgVal = MOMENT(msgVal, "YYYY-MM-DD HH:mm:ss");
+
     var lesser = momentArray[0];
     if(lesser !== null && msgVal - lesser < 0)      return false;
 
@@ -113,7 +114,7 @@ YKW.prototype.__checkTimeRange = function(momentArray, msgVal) {
     */
 
     // Check lesser value of range
-    msgVal = MOMENT(msgVal);
+    msgVal = MOMENT(msgVal, 'HH:mm:ss');
     var lesser = MOMENT(momentArray[0],'HH:mm:ss');
     if(lesser !== null && msgVal - lesser < 0)  return false;
 
@@ -290,6 +291,8 @@ YKW.prototype.__checkOperation = function(operation, msgVal, cVal) {
             break;
         }
 
+        default : {
+        }
 
     } // Switch
 
@@ -525,7 +528,7 @@ YKW.prototype.__toDateTimeMomentArray = function(refVal) {
 
     // split from ~ , first value of array is lower end and second is max
     refVal.split('~').forEach(function(k) {
-        var mom = MOMENT(k.trim());
+        var mom = MOMENT(k.trim(), "YYYY-MM-DD HH:mm:ss");
 
         if(mom.isValid()) momArray.push(mom);
         else    momArray.push(null);
@@ -734,7 +737,7 @@ YKW.prototype._parseRuleAction = function(action) {
  */
 
 YKW.prototype.loadRules = function(receivedRulesArray) {
-  var
+    var
         self        = this,
         result      = [],
 
@@ -802,12 +805,12 @@ YKW.prototype.loadRules = function(receivedRulesArray) {
             eachRule.conditionsOperator = _.template(eachRule.conditionsOperator);
 
         // conditions parsing
-        for(var icond = 0; icond < _.get(eachRule, 'conditions', []); icond ++) {
+        for(var icond = 0; icond < _.get(eachRule, 'conditions', []).length; icond ++) {
             eachRule.conditions[icond] = self._parseRuleCondition(eachRule.conditions[icond]);
         }
 
         // action parsing
-        for(var iact = 0; iact < _.get(eachRule, 'actions', []); iact ++) {
+        for(var iact = 0; iact < _.get(eachRule, 'actions', []).length; iact ++) {
             eachRule.actions[iact] = self._parseRuleAction(eachRule.actions[iact]);
         }
 
