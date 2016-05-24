@@ -154,6 +154,40 @@ meta_object = ruleEngineObject.applyRules(msg, ruletag);
 
 ```
 
+### Array of Rules Example
+```
+Var arrayOfRules = [
+    {
+    "id": 1, // rule ID , has to be unique 
+    "name": "Natural Number ", // Dont care
+    "external_reference": "", // Dont care
+    "conditionsOperator": "&&", // very important
+    "priority": 170001,
+    "tags": [
+        "natural",
+        ""
+    ],
+    "conditions": [
+        {
+            "id": 1,
+            "key": "integer",
+            "operation": ">",
+            "value": "0"
+        }
+    ],
+    "actions": [
+        {
+            "id": 2,
+            "action": "SET_VARIABLE",
+            "key": "is_natural",
+            "value": 1
+        }
+    ]
+}
+];
+
+
+```
 
 
 ### Rule Engine Hash ( loaded_hash )

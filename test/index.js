@@ -1,10 +1,10 @@
 "use strict";
 
 /*
-    Pending tests
-    - For Issue #1 , #16
-    - For each rule ... Check Exact Meta value .. that will easily check order execution ...
-        -- by something like iterative check
+
+    Test cases
+    1. To test coverage of all conditions , Flow , rules priority and early exit optimizations
+    2. To becnahmark by creating dynamic rules , conditions and data
 */
 
 var
@@ -32,7 +32,7 @@ function check_rule_count_and_hash(meta, n) {
     _.keys(meta.rules).length.should.equal(n);
 
     if(n === 0 ) meta.rules_load.hash.should.equal("d751713988987e9331980363e24189ce");
-    else if(n===2) meta.rules_load.hash.should.equal("feb65a88a9f346494ad5a12de14dc7ec");
+    else if(n===2) meta.rules_load.hash.should.equal("43383023af95aee2cd765abaf7c10ecb");
 }
 
 describe("Rule Engine Test Suite for empty rules" , function () {
@@ -92,7 +92,7 @@ describe("Basic Operator Test Suite with rules", function () {
                                     "integer" : 1
                                 },
 
-                'ruleOutput'    : {"1":{"ruleid":1,"exec_order":1,"conditions":{"1":{"cid":1,"lval":1,"op":">","rval":"0","d":true}},"applied":true,"actions":{"2":{"aid":2,"action":"SET_VARIABLE","key":"is_natural","val":1}}},"2":{"ruleid":2,"exec_order":0,"conditions":{"3":{"cid":3,"lval":1,"op":">","rval":"0","d":true}},"applied":true,"actions":{"4":{"aid":4,"action":"EXEC"}}}},
+                'meta'    : {"1":{"ruleid":1,"exec_order":1,"conditions":{"1":{"cid":1,"lval":1,"op":">","rval":"0","d":true}},"applied":true,"actions":{"2":{"aid":2,"action":"SET_VARIABLE","key":"is_natural","val":1}}},"2":{"ruleid":2,"exec_order":0,"conditions":{"3":{"cid":3,"lval":1,"op":">","rval":"0","d":true}},"applied":true,"actions":{"4":{"aid":4,"action":"EXEC"}}}},
 
 
                 'output'        : {"integer" : 1, "is_natural" : 1},
@@ -104,7 +104,7 @@ describe("Basic Operator Test Suite with rules", function () {
                                     "integer" : 0
                                 },
 
-                'ruleOutput'    : {"1":{"ruleid":1,"exec_order":1,"conditions":{"1":{"cid":1,"lval":0,"op":">","rval":"0","d":false}},"applied":false,"actions":{}},"2":{"ruleid":2,"exec_order":0,"conditions":{"3":{"cid":3,"lval":0,"op":">","rval":"0","d":false}},"applied":false,"actions":{}}},
+                'meta'    : {"1":{"ruleid":1,"exec_order":1,"conditions":{"1":{"cid":1,"lval":0,"op":">","rval":"0","d":false}},"applied":false,"actions":{}},"2":{"ruleid":2,"exec_order":0,"conditions":{"3":{"cid":3,"lval":0,"op":">","rval":"0","d":false}},"applied":false,"actions":{}}},
 
                 'output'        : {"integer" : 0},
 
@@ -115,7 +115,7 @@ describe("Basic Operator Test Suite with rules", function () {
                 'message'       : {
                                     "integer" : -1
                                 },
-                'ruleOutput'    : {"1":{"ruleid":1,"exec_order":1,"conditions":{"1":{"cid":1,"lval":-1,"op":">","rval":"0","d":false}},"applied":false,"actions":{}},"2":{"ruleid":2,"exec_order":0,"conditions":{"3":{"cid":3,"lval":-1,"op":">","rval":"0","d":false}},"applied":false,"actions":{}}},
+                'meta'    : {"1":{"ruleid":1,"exec_order":1,"conditions":{"1":{"cid":1,"lval":-1,"op":">","rval":"0","d":false}},"applied":false,"actions":{}},"2":{"ruleid":2,"exec_order":0,"conditions":{"3":{"cid":3,"lval":-1,"op":">","rval":"0","d":false}},"applied":false,"actions":{}}},
 
                 'output'        : {"integer" : -1},
             },
@@ -137,92 +137,13 @@ describe("Basic Operator Test Suite with rules", function () {
                 check_rule_count_and_hash(meta, 2);
 
                 // Checking rules which were applied
-                _.isEqual(meta.rules,eachTest.ruleOutput).should.equal(true);
+                _.isEqual(meta.rules,eachTest.meta).should.equal(true);
 
                 done();
 
             });
 
         });
-
-        // it("Should should pass a natural number check for a positive integer" , function (done) {
-
-        //     var message = {
-        //         "integer" : 1
-        //     };
-
-        //     // Tags to ensure independent spaces for test cases
-        //     var meta = re.applyRules(message);
-
-        //     // Normal Rule check ...
-        //     should(message).have.property('is_natural', 1);
-
-        //     // Meta check
-        //     check_basic_meta(meta);
-        //     check_basic_load_meta(meta);
-        //     check_rule_count_and_hash(meta, 2);
-
-        //     // Checking rules which were applied
-        //     var ruleOutput = {"1":{"ruleid":1,"exec_order":1,"conditions":{"1":{"cid":1,"lval":1,"op":">","rval":"0","d":true}},"applied":true,"actions":{"2":{"aid":2,"action":"SET_VARIABLE","key":"is_natural","val":1}}},"2":{"ruleid":2,"exec_order":0,"conditions":{"3":{"cid":3,"lval":1,"op":">","rval":"0","d":true}},"applied":true,"actions":{"4":{"aid":4,"action":"EXEC"}}}};
-
-        //     _.isEqual(meta.rules,ruleOutput).should.equal(true);
-
-        //     done();
-
-        // });
-
-        // it("Should not pass a natural number check for 0" , function (done) {
-
-        //     var message = {
-        //         "integer" : 0
-        //     };
-
-
-        //     // Tags to ensure independent spaces for test cases
-        //     var meta = re.applyRules(message);
-
-        //     // Normal Rule check ...
-        //     should(message).not.have.property('is_natural');
-
-        //     // Meta check
-        //     check_basic_meta(meta);
-        //     check_basic_load_meta(meta);
-        //     check_rule_count_and_hash(meta, 2);
-
-        //     // Checking rules which were applied
-        //     var ruleOutput = {"1":{"ruleid":1,"exec_order":1,"conditions":{"1":{"cid":1,"lval":0,"op":">","rval":"0","d":false}},"applied":false,"actions":{}},"2":{"ruleid":2,"exec_order":0,"conditions":{"3":{"cid":3,"lval":0,"op":">","rval":"0","d":false}},"applied":false,"actions":{}}};
-
-        //     _.isEqual(meta.rules,ruleOutput).should.equal(true);
-
-        //     done();
-        // });
-
-
-        // it("Should not pass a natural number check for negative numbers" , function (done) {
-
-        //     var message = {
-        //         "integer" : -1
-        //     };
-
-
-        //     // Tags to ensure independent spaces for test cases
-        //     var meta = re.applyRules(message);
-
-        //     // Normal Rule check ...
-        //     should(message).not.have.property('is_natural');
-
-        //     // Meta check
-        //     check_basic_meta(meta);
-        //     check_basic_load_meta(meta);
-        //     check_rule_count_and_hash(meta, 2);
-
-        //     // Checking rules which were applied
-        //     var ruleOutput = {"1":{"ruleid":1,"exec_order":1,"conditions":{"1":{"cid":1,"lval":-1,"op":">","rval":"0","d":false}},"applied":false,"actions":{}},"2":{"ruleid":2,"exec_order":0,"conditions":{"3":{"cid":3,"lval":-1,"op":">","rval":"0","d":false}},"applied":false,"actions":{}}};
-
-        //     _.isEqual(meta.rules,ruleOutput).should.equal(true);
-
-        //     done();
-        // });
 
     });
 

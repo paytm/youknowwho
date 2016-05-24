@@ -2,55 +2,60 @@
 
 "use strict";
 
-var rules = [
-{
-    rule: {
-        id: 1,
-        name: 'Natural Number ',
-        external_reference: '',
-        conditionsOperator: '&&',
-        priority: 170001
+var rules  = [
+   {
+       "id": 1,
+       "name": "Natural Number ",
+       "externalReference": "",
+       "conditionsOperator": "&&", // very important
+       "priority": 170001,
+       "tags": [
+           "natural",
+       ],
+       "conditions": [
+           {
+               "id": 1,
+               "key": "integer",
+               "operation": ">",
+               "value": "0"
+           }
+       ],
+       "actions": [
+           {
+               "id": 2,
+               "action": "SET_VARIABLE",
+               "key": "is_natural",
+               "value": 1
+           }
+       ]
     },
-    'rule_tags': {
-        tags: 'natural'
+
+    {
+       "id": 2,
+       "name": "Execute  Function",
+       "externalReference": "",
+       "conditionsOperator": "&&", // very important
+       "priority": 2,
+       "tags": [
+           "exec",
+       ],
+       "conditions": [
+           {
+                'id': 3,
+                'key': 'integer',
+                'operation': '>',
+                'value': '0'
+            }
+       ],
+       "actions": [
+           {
+                'id'     : 4,
+                'action' : "EXEC",
+                'key'    : "parse_json",
+                'value'  : "name"
+            }
+       ]
     },
-    rule_condition: {
-        id: 1,
-        key: 'integer',
-        operation: '>',
-        value: '0'
-    },
-    rule_action: {
-        id: 2,
-        action: 'SET_VARIABLE',
-        key: 'is_natural',
-        value: 1
-    }
-},
-// rule with no conditions
-{
-    rule: {
-        id: 2,
-        name: 'Execute  Function ',
-        external_reference: '',
-        conditionsOperator: '&&',
-        priority: 2
-    },
-    'rule_tags': {
-        tags: 'exec'
-    },
-    rule_condition: {
-        id: 3,
-        key: 'integer',
-        operation: '>',
-        value: '0'
-    },
-    rule_action: {
-        id     : 4,
-        action : "EXEC",
-        key    : "parse_json",
-        value  : "name"
-    }
-}];
+];
 
 module.exports = rules;

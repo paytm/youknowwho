@@ -733,134 +733,90 @@ YKW.prototype._parseRuleAction = function(action) {
     And keep reloading every 5 minutes or so ...
  */
 
-YKW.prototype.loadRules = function(r) {
+YKW.prototype.loadRules = function(receivedRulesArray) {
   var
         self        = this,
         result      = [],
 
-    /*
-        rule_condition_map keeps a mapping of rule Ids to the condition keys already associated to the rule
-        Example
-           {
-              1 : { 'catlogProductId': true, 'requestType': true  },
-              2 : {  'requestType': true }
-            }
-     */
-        rule_condition_map = {},
+        rulesArray  = _.cloneDeep(receivedRulesArray),
 
-     /*
-        rule_action_map keeps a mapping of rule Ids to the action keys already associated to the rule
-        Example
-           {
-              1 : { 'validationSuccesful': true  },
-              2 : {  'frontendErrMessage': true }
-            }
-     */
-        rule_action_map    = {},
-
-    /*
-      rule_map is the mapping of rule_ids to the final object
-      Example
-       {
-          1 : {
-                id         : 1,
-                name       : 'Test',
-                conditions : [],
-                actions    : []
-              }
-        }
-    */
-        rule_map    = {},
         startTime   = MOMENT(),
         endTime     = null,
 
-        hash        = CRYPTO.createHash('md5').update(JSON.stringify(r)).digest("hex");
+        hash        = CRYPTO.createHash('md5').update(JSON.stringify(rulesArray)).digest("hex");
 
-    // set HASH in meta
+    // set HASH in meta .. Now we can dirty the rulesArray
     _.set(self.masterMeta, "rules_load.hash", hash);
 
     // capture in Meta when were rules loaded
     _.set(self.masterMeta, 'rules_load.load_start', startTime.format('x'));
 
-    r.forEach(function (item) {
+
+    /* E.g.
+
+    {
+       "id": 1,
+       "name": "Natural Number ",
+       "external_reference": "",
+       "conditionsOperator": "&&", // very important
+       "priority": 170001,
+       "tags": [
+           "natural",
+       ],
+       "conditions": [
+           {
+               "id": 1,
+               "key": "integer",
+               "operation": ">",
+               "value": "0"
+           }
+       ],
+       "actions": [
+           {
+               "id": 2,
+               "action": "SET_VARIABLE",
+               "key": "is_natural",
+               "value": 1
+           }
+       ]
+    },
+
+    Important Variables to Load : self.tagsRuleMap[tag] , self.loadedRules;
+
+    */
+
+    /* Sort Rules by priority , ascending order: Remember : Lower the integer val, higher the Priority */
+    rulesArray = _.sortBy(rulesArray, 'priority');
+
+    for(var iRule = 0; iRule < rulesArray.length; iRule++) {
         /* HAck : to parse the value as true/false boolean
             We check value in condition and action,
             and if we encounter true/ false , we parse it to BOOLEAN
             Not neat, maybe we will change in future and put data type
         */
 
-        // Rule already exists, just put some more valus in it
-        if (rule_map[item.rule.id]) {
+        var eachRule = rulesArray[iRule];
 
-            // get Rule
-            var row_found = rule_map[item.rule.id];
+        // conditional operator, create a template in case its a complex rule
+        if (eachRule.conditionsOperator != R_OPERATORS.AND && eachRule.conditionsOperator != R_OPERATORS.OR)
+            eachRule.conditionsOperator = _.template(eachRule.conditionsOperator);
 
-            // see if rule condition has already been there
-            if (!rule_condition_map[row_found.id][item.rule_condition.id]) {
-
-                item.rule_condition = self._parseRuleCondition(item.rule_condition);
-                row_found.conditions.push(item.rule_condition);
-
-                rule_condition_map[row_found.id][item.rule_condition.id] = true;
-            }
-
-            // see if action is already there
-            if (!rule_action_map[row_found.id][item.rule_action.id]) {
-
-                item.rule_action = self._parseRuleAction(item.rule_action);
-                row_found.actions.push(item.rule_action);
-
-                rule_action_map[row_found.id][item.rule_action.id] = true;
-            }
+        // conditions parsing
+        for(var icond = 0; icond < _.get(eachRule, 'conditions', []); icond ++) {
+            eachRule.conditions[icond] = self._parseRuleCondition(eachRule.conditions[icond]);
         }
 
-        // Create new Rule
-        else {
-            var row_new = item.rule;
-
-            // set tags
-            var tags = _.get(item[''], 'tags', null);
-            row_new.tags = (tags) ? tags.split(',') : [];
-
-            // set conditions
-            item.rule_condition = self._parseRuleCondition(item.rule_condition);
-            row_new.conditions = [ item.rule_condition];
-
-            // set actions
-            item.rule_action = self._parseRuleAction(item.rule_action);
-            row_new.actions    = [ item.rule_action ];
-
-            // setting condition to avoid stuff : this is join
-            rule_condition_map[row_new.id] = {};
-            rule_condition_map[row_new.id][item.rule_condition.id] = true;
-
-            // setting action to avoid stuff : this is join
-            rule_action_map[row_new.id] = {};
-            rule_action_map[row_new.id][item.rule_action.id] = true;
-
-            //create a template in case its a complex rule
-            if (row_new.conditionsOperator != R_OPERATORS.AND && row_new.conditionsOperator != R_OPERATORS.OR) {
-                row_new.conditionsOperator = _.template(row_new.conditionsOperator);
-            }
-
-            // Final Rule Map
-            rule_map[item.rule.id] = row_new;
-
+        // action parsing
+        for(var iact = 0; iact < _.get(eachRule, 'actions', []); iact ++) {
+            eachRule.actions[iact] = self._parseRuleAction(eachRule.actions[iact]);
         }
-    });
 
-    // Get a List of Rules , then we will sort it
-    Object.keys(rule_map).forEach(function (rule_id) {
+    }
 
-        // Push the Rule to a list
-        result.push(rule_map[rule_id]);
-    });
-
-    /* Sort Resultant Rules by priority */
-    result = _.sortBy(result, 'priority');
 
     /* Assign the rules to loaded rules */
-    self.loadedRules = result;
+    self.loadedRules = rulesArray;
+
     /*
         Push the Rules to a Tag List Map so that
         we can access rules based on tags
