@@ -143,7 +143,13 @@ var rules  = [
                "action": "SET_VARIABLE",
                "key": "is_natural",
                "value": 1
-           }
+           },
+           {
+                'id'     : 102,
+                'action' : "RE_EXIT",
+                'key'    : "",
+                'value'  : ""
+            }
        ]
     },
 
@@ -166,10 +172,10 @@ var rules  = [
        ],
        "actions": [
            {
-                'id'     : 4,
-                'action' : "EXEC",
-                'key'    : "parse_json",
-                'value'  : "name"
+                'id'     : 200,
+                'action' : "DANGEROUS_EVAL",
+                'key'    : "eval_val",
+                'value'  : "2+3"
             }
        ]
     },
