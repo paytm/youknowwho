@@ -850,20 +850,3 @@ YKW.prototype.loadRules = function(receivedRulesArray) {
 };
 
 module.exports = YKW;
-
-
-
-/*
-    ***************** TESTING ********************
-
-    To test we use webserver. Just run it with -l flag
-    and use it for /search url to test
-*/
-
-
-(function() {
-    if (require.main === module) {
-      var ykw = new YKW();
-      ykw.loadRules();
-    }
-}());

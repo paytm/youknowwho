@@ -234,10 +234,10 @@ Rules, conditions and actions are dictionary based to have easy accessibility
 ```
 
 
-### Benchmarks : on single core
- - 10K rules with 1 condition 1 action
- - 1 rule with 10K conditions, 10K actions
- - 1 rule, 1 condition, 1 action , 10K iterations
+### Benchmarks : uses benchmark.js
+```
+npm run benchmark
+```
 
 
 ### Theory 

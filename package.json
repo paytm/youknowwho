@@ -4,7 +4,8 @@
   "description": "Rule engine for most of generic decision makings",
   "main": "index.js",
   "scripts": {
-    "test": "istanbul cover _mocha -- -R spec"
+    "test": "istanbul cover _mocha -- -R spec",
+    "benchmark" : "node benchmark"
   },
   "repository": {
     "type": "git",
@@ -28,6 +29,7 @@
     "validator": "^4.2.1"
   },
   "devDependencies": {
+    "benchmark": "^2.1.0",
     "coveralls": "^2.11.9",
     "istanbul": "^0.4.3",
     "mocha": "~2.3.3",
