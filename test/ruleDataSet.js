@@ -161,6 +161,7 @@ var rules  = [
        "priority": 2,
        "tags": [
            "exec",
+           "natural",
        ],
        "conditions": [
            {
