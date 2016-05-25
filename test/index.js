@@ -121,7 +121,7 @@ describe("Basic Operator Test Suite with rules", function () {
                                 },
                 'meta'    : {"1":{"ruleid":1,"exec_order":1,"conditions":{"100":{"cid":100,"lval":-1,"op":">","rval":"0","d":false},"101":{"cid":101,"lval":-1,"op":">=","rval":"1","d":false}},"applied":false,"actions":{}},"2":{"ruleid":2,"exec_order":0,"conditions":{"3":{"cid":3,"lval":-1,"op":">","rval":"0","d":false}},"applied":false,"actions":{}}},
 
-                'output'        : {"integer" : -10},
+                'output'        : {"integer" : -1},
             },
 
 
