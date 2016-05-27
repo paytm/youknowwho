@@ -79,9 +79,10 @@ function YKW(opts) {
 
 
 YKW.prototype.__checkRange = function(rangeArray, val) {
-    var self = this;
-    var result = TRANGE_BINARYSEARCH(rangeArray, val);
+    // this will nbe null if Range array wasnt parsed properly
+    if(rangeArray === null) return null;
 
+    var result = TRANGE_BINARYSEARCH(rangeArray, val);
     return result;
 };
 
@@ -663,8 +664,11 @@ YKW.prototype._parseCondition = function (condition) {
     _.set(condition, "value", self.__toBoolOrNull(_.get(condition , "value", null)));
 
     // if range is in condition , then Lets parse it using TinyRange
-    if([R_COND_OPS.RANGE , R_COND_OPS.NOT_RANGE].indexOf(condition.operation) > -1)
-        condition.value = RANGE.parse(condition.value);
+    if([R_COND_OPS.RANGE , R_COND_OPS.NOT_RANGE].indexOf(condition.operation) > -1) {
+        try {
+            condition.value = RANGE.parse(condition.value);
+        } catch(ex) { condition.value = null; }
+    }
 
     // If condition has Datetime in operation , then lets parse it in MOMENT and keep it
     else if([

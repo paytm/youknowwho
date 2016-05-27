@@ -45,7 +45,7 @@ var rules  = [
                "id": 104,
                "key": "integer",
                "operation": "range",
-               "value": "1,2,3~5, 6~"
+               "value": "~-1,1,2,3~5, 6~"
            },
 
            {
@@ -523,6 +523,36 @@ var rules  = [
                "operation": "timerange",
                "value": "asdf~asdf"
           },
+          {
+               "id": 905,
+               "key": "integer",
+               "operation": "range",
+               "value": "asdf"
+           },
+           {
+               "id": 906,
+               "key": "integer",
+               "operation": "range",
+               "value": ",,"
+           },
+           {
+               "id": 907,
+               "key": "integer",
+               "operation": "range",
+               "value": "7~6"
+           },
+           {
+               "id": 908,
+               "key": "integer",
+               "operation": "range",
+               "value": "7~7"
+           },
+           {
+               "id": 908,
+               "key": "integer",
+               "operation": "range",
+               "value": "4~8,5~8"
+           },
        ],
        "actions": [
            {
