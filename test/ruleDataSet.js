@@ -313,8 +313,24 @@ var rules  = [
                "operation": "=",
                "value": "-10"
            },
+
            {
                "id": 319,
+               "key": "datetime",
+               "operation": "datetimerange",
+               "value": "2016-01-01 00:00:00~2017-01-01 00:00:00"
+           },
+
+
+           {
+               "id": 320,
+               "key": "time",
+               "operation": "timerange",
+               "value": "14:00:00 ~ 14:05:00"
+           },
+
+           {
+               "id": 321,
                "key": "integer",
                "operation": "=",
                "value": "1"
@@ -388,6 +404,133 @@ var rules  = [
                 'key'    : "template_eval_val",
                 'value'  : "<%= integer %> + 1"
             }
+       ]
+    },
+
+    {
+       "id": 6,
+       "name": "0 condition, template action set variable",
+       "externalReference": "",
+       "conditionsOperator": "&&",
+       "priority": 600001,
+       "tags": [
+           "template_action_eval",
+       ],
+       "conditions": [
+       ],
+       "actions": [
+           {
+               "id": 601,
+               "action": "SET_VARIABLE",
+               "key": "set_variable_eval",
+               "value": "<%= integer %>"
+           },
+       ]
+    },
+
+    {
+       "id": 7,
+       "name": "wrong condition which should be null in decision",
+       "externalReference": "",
+       "conditionsOperator": "&&",
+       "priority": 700001,
+       "tags": [
+           "wrong_cond",
+       ],
+       "conditions": [
+      {
+              'id': 701,
+              'key': 'integer',
+              'operation': 'wrong',
+              'value': '0'
+      },
+       ],
+       "actions": [
+           {
+               "id": 701,
+               "action": "SET_VARIABLE",
+               "key": "wrong_cond",
+               "value": 1
+           },
+       ]
+    },
+
+    {
+       "id": 8,
+       "name": "setting true false and null in rule action set variable",
+       "externalReference": "",
+       "conditionsOperator": "&&",
+       "priority": 800001,
+       "tags": [
+       ],
+       "conditions": [
+       ],
+       "actions": [
+           {
+               "id": 801,
+               "action": "SET_VARIABLE",
+               "key": "true",
+               "value": "true"
+           },
+           {
+               "id": 802,
+               "action": "SET_VARIABLE",
+               "key": "false",
+               "value": "false"
+           },
+           {
+               "id": 803,
+               "action": "SET_VARIABLE",
+               "key": "null",
+               "value": "null"
+           },
+       ]
+    },
+
+
+    {
+       "id": 9,
+       "name": "Wrong Datetime format in condition",
+       "externalReference": "",
+       "conditionsOperator": "&&",
+       "priority": 900001,
+       "tags": [
+          "wrong_datetime"
+       ],
+       "conditions": [
+         {
+               "id": 901,
+               "key": "datetime",
+               "operation": "datetimerange",
+               "value": "asdf~asdg"
+          },
+          {
+               "id": 902,
+               "key": "time",
+               "operation": "timerange",
+               "value": "asdf~asdg"
+          },
+
+          {
+               "id": 903,
+               "key": "datetime_wrong",
+               "operation": "datetimerange",
+               "value": "asdf~asdf"
+          },
+          {
+               "id": 904,
+               "key": "time_wrong",
+               "operation": "timerange",
+               "value": "asdf~asdf"
+          },
+       ],
+       "actions": [
+           {
+               "id": 901,
+               "action": "SET_VARIABLE",
+               "key": "wrong",
+               "value": "true"
+           },
        ]
     },
 

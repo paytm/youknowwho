@@ -88,13 +88,10 @@ YKW.prototype.__checkRange = function(rangeArray, val) {
 
 /* Check Datetime Range */
 YKW.prototype.__checkDateTimeRange = function(momentArray, msgVal) {
-    /*
-        Okay, now the date time range we get here is something like this
-        [ MOMENT/null, MOMENT/null]
-    */
-
-    // Check lesser value of range
     msgVal = MOMENT(msgVal, "YYYY-MM-DD HH:mm:ss");
+
+    // return null if msgVal is wrongly parsed datetime string
+    if(!msgVal.isValid()) return null;
 
     var lesser = momentArray[0];
     if(lesser !== null && msgVal - lesser < 0)      return false;
@@ -103,24 +100,28 @@ YKW.prototype.__checkDateTimeRange = function(momentArray, msgVal) {
     var greater = momentArray[1];
     if(greater !== null && msgVal - greater > 0)    return false;
 
+    // if datetime Conditions are both null , then condition must be null
+    if(lesser === null && greater === null)         return null;
+
     // All conditions must be met
     return true;
 };
 
 YKW.prototype.__checkTimeRange = function(momentArray, msgVal) {
-    /*
-        Okay, now the date time range we get here is something like this
-        [ MOMENT/null, MOMENT/null]
-    */
-
-    // Check lesser value of range
     msgVal = MOMENT(msgVal, 'HH:mm:ss');
-    var lesser = MOMENT(momentArray[0],'HH:mm:ss');
+
+    // return null if msgVal is wrongly parsed datetime string
+    if(!msgVal.isValid()) return null;
+
+    var lesser = momentArray[0];
     if(lesser !== null && msgVal - lesser < 0)  return false;
 
     // Check greater value of range
-    var greater = MOMENT(momentArray[1],'HH:mm:ss');
+    var greater = momentArray[1];
     if(greater !== null && msgVal - greater > 0)    return false;
+
+    // if datetime Conditions are both null , then condition must be null
+    if(lesser === null && greater === null)         return null;
 
     // All conditions must be met
     return true;
@@ -128,10 +129,7 @@ YKW.prototype.__checkTimeRange = function(momentArray, msgVal) {
 
 /* Check if value matches regext */
 YKW.prototype.__checkRegex = function(regexVal, msgVal) {
-    if (typeof(regexVal) === 'string')
-        regexVal = new RegExp(regexVal);
-
-    return regexVal.test(msgVal);
+    return regexVal.test(VALIDATOR.toString(msgVal));
 };
 
 /* Check is in the string array provided */
@@ -143,30 +141,10 @@ YKW.prototype.__checkStringRange = function(rangeArray, msgVal) {
 };
 
 YKW.prototype.__checkIsSet = function (cVal, msgVal) {
-    if (!msgVal) {
-    return false;
-    }
+    cVal    = VALIDATOR.toString(cVal).split(',');
+    msgVal  = VALIDATOR.toString(msgVal).split(',');
 
-    if (typeof cVal !== 'string') {
-        cVal = cVal.toString();
-    }
-
-    if (typeof msgVal !== 'string') {
-        msgVal = msgVal.toString();
-    }
-
-    cVal = cVal.split(',');
-
-    msgVal = msgVal.split(',');
-
-    var intersection_set = _.intersection(cVal, msgVal);
-
-    if (intersection_set.length > 0) {
-        return true;
-    } else {
-        return false;
-    }
-
+    return (_.intersection(cVal, msgVal).length > 0) ? true : false;
 };
 
 YKW.prototype.__checkOperation = function(operation, msgVal, cVal) {
@@ -291,6 +269,7 @@ YKW.prototype.__checkOperation = function(operation, msgVal, cVal) {
             break;
         }
 
+        /* Default decision is NULL */
         default : {
         }
 
@@ -445,7 +424,8 @@ YKW.prototype.applyRules = function(msg, tag) {
         /*
             When do we apply actions ?
                 If finaldecision is TRUE
-                or NULL --> Why ? That mean no condition was there , hence we always apply that Rule
+                or NULL --> Why ? That mean no condition was there or some bad conditions were there
+                , hence we always apply that Rule
         */
         if(finalDecision === false) continue;
 
@@ -527,12 +507,10 @@ YKW.prototype.__toCompiledString = function(refVal) {
  */
 
 YKW.prototype.__toDateTimeMomentArray = function(refVal) {
-    if (typeof refVal !== 'string') return refVal;
-
     var momArray = [];
 
     // split from ~ , first value of array is lower end and second is max
-    refVal.split('~').forEach(function(k) {
+    VALIDATOR.toString(refVal).split('~').forEach(function(k) {
         var mom = MOMENT(k.trim(), "YYYY-MM-DD HH:mm:ss");
 
         if(mom.isValid()) momArray.push(mom);
@@ -547,12 +525,14 @@ YKW.prototype.__toDateTimeMomentArray = function(refVal) {
     type string to an array of time
 */
 YKW.prototype.__toTimeMomentArray = function(refVal) {
-    if (typeof refVal !== 'string') return refVal;
-
     var momArray = [];
+
     // split from ~ , first value of array is lower end and second is max
-    refVal.split('~').forEach(function(k) {
-        momArray.push(k);
+    VALIDATOR.toString(refVal).split('~').forEach(function(k) {
+        var mom = MOMENT(k.trim(), "HH:mm:ss");
+
+        if(mom.isValid()) momArray.push(mom);
+        else    momArray.push(null);
     });
     return momArray;
 };
@@ -561,9 +541,7 @@ YKW.prototype.__toTimeMomentArray = function(refVal) {
     for compiling and storing regex
 */
 YKW.prototype.__compileRegex = function(refVal) {
-    if (typeof refVal !== 'string') return refVal;
-
-    return new RegExp(refVal);
+    return new RegExp(VALIDATOR.toString(refVal));
 };
 
 

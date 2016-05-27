@@ -105,27 +105,59 @@ describe("Basic Operator Test Suite with rules", function () {
             },
             {
                 'testCaseName'  : '#2 Should not pass a natural number check for 0',
-                'rules_executed' : 5,
+                'rules_executed' : 9,
 
                 'message'       : {
-                                    "integer" : 0
+                                    "integer" : 0,
+                                    "datetime_wrong" : "asdf 23:42:#35:wrong_date",
+                                    "time_wrong"     : "asdf 23:42:#35:wrong_date"
                                 },
 
                 // 'meta'    : {"1":{"ruleid":1,"exec_order":1,"conditions":{"100":{"cid":100,"lval":0,"op":">","rval":"0","d":false},"101":{"cid":101,"lval":0,"op":">=","rval":"1","d":false}},"applied":false,"actions":{}},"2":{"ruleid":2,"exec_order":0,"conditions":{"3":{"cid":3,"lval":0,"op":">","rval":"0","d":false}},"applied":false,"actions":{}}},
 
-                'output'        : {"integer" : 0, 'is_weird' : 1, 'template_eval_val': 1},
+                'output'        : {
+                    "integer": 0,
+                    "is_weird": 1,
+                    "template_eval_val": 1,
+                    "set_variable_eval": "0",
+                    'wrong_cond' : 1,
+                    'true': true,
+                    'false': false,
+                    'null': null,
+                    'wrong' : true,
+
+                    "datetime_wrong" : "asdf 23:42:#35:wrong_date",
+                    "time_wrong"     : "asdf 23:42:#35:wrong_date"
+                },
 
             },
             {
                 'testCaseName'  : '#3 Should not pass a natural number check for negative numbers',
-                'rules_executed' : 5,
+                'rules_executed' : 9,
 
                 'message'       : {
-                                    "integer" : -1
+                                    "integer" : -1,
+                                    "datetime_wrong" : "asdf 23:42:#35:wrong_date",
+                                    "time_wrong"     : "asdf 23:42:#35:wrong_date"
                                 },
                 // 'meta'    : {"1":{"ruleid":1,"exec_order":1,"conditions":{"100":{"cid":100,"lval":-1,"op":">","rval":"0","d":false},"101":{"cid":101,"lval":-1,"op":">=","rval":"1","d":false}},"applied":false,"actions":{}},"2":{"ruleid":2,"exec_order":0,"conditions":{"3":{"cid":3,"lval":-1,"op":">","rval":"0","d":false}},"applied":false,"actions":{}}},
 
-                'output'        : {"integer" : -1, 'is_weird' : 1, 'eval_val': 2, 'template_eval_val': 0},
+                'output'        : {
+                    "integer": -1,
+                    "is_weird": 1,
+                    "eval_val": 2,
+                    "template_eval_val": 0,
+                    "set_variable_eval": "-1",
+                    'wrong_cond' : 1,
+                    'true': true,
+                    'false': false,
+                    'null': null,
+
+                    'wrong' : true,
+
+                    "datetime_wrong" : "asdf 23:42:#35:wrong_date",
+                    "time_wrong"     : "asdf 23:42:#35:wrong_date"
+                },
             },
 
             {
@@ -174,6 +206,66 @@ describe("Basic Operator Test Suite with rules", function () {
                 // 'meta'    : {"1":{"ruleid":1,"exec_order":1,"conditions":{"100":{"cid":100,"lval":-1,"op":">","rval":"0","d":false},"101":{"cid":101,"lval":-1,"op":">=","rval":"1","d":false}},"applied":false,"actions":{}},"2":{"ruleid":2,"exec_order":0,"conditions":{"3":{"cid":3,"lval":-1,"op":">","rval":"0","d":false}},"applied":false,"actions":{}}},
 
                 'output'        : { 'integer': 1, 'string': 'abcdef', 'time': '13:24:30', 'datetime': '2015-01-01 00:00:00', 'template_eval_val' : 2 },
+            },
+
+            {
+                'testCaseName'  : '#7 Set variable Eval',
+                'tag_to_exec'   : 'template_action_eval',
+                'rules_executed': 1,
+
+                'message'       : {
+                                    "integer"   : 1,
+                                    "string"    : "abcdef",
+                                    "time"      : "13:24:30",
+                                    "datetime"  : "2015-01-01 00:00:00"
+                                },
+                // 'meta'    : {"1":{"ruleid":1,"exec_order":1,"conditions":{"100":{"cid":100,"lval":-1,"op":">","rval":"0","d":false},"101":{"cid":101,"lval":-1,"op":">=","rval":"1","d":false}},"applied":false,"actions":{}},"2":{"ruleid":2,"exec_order":0,"conditions":{"3":{"cid":3,"lval":-1,"op":">","rval":"0","d":false}},"applied":false,"actions":{}}},
+
+                'output'        : { 'integer': 1, 'string': 'abcdef', 'time': '13:24:30', 'datetime': '2015-01-01 00:00:00', 'set_variable_eval' : '1' },
+            },
+
+            {
+                'testCaseName'  : '#8 wrong condition test case',
+                'tag_to_exec'   : 'wrong_cond',
+                'rules_executed': 1,
+
+                'message'       : {
+                                    "integer"   : 1,
+                                    "string"    : "abcdef",
+                                    "time"      : "13:24:30",
+                                    "datetime"  : "2015-01-01 00:00:00"
+                                },
+                // 'meta'    : {"1":{"ruleid":1,"exec_order":1,"conditions":{"100":{"cid":100,"lval":-1,"op":">","rval":"0","d":false},"101":{"cid":101,"lval":-1,"op":">=","rval":"1","d":false}},"applied":false,"actions":{}},"2":{"ruleid":2,"exec_order":0,"conditions":{"3":{"cid":3,"lval":-1,"op":">","rval":"0","d":false}},"applied":false,"actions":{}}},
+
+                'output'        : { 'integer': 1, 'string': 'abcdef', 'time': '13:24:30', 'datetime': '2015-01-01 00:00:00', 'wrong_cond' : 1 },
+            },
+
+            {
+                'testCaseName'  : '#9 Wrong datetime format',
+                'tag_to_exec'   : 'wrong_datetime',
+                'rules_executed': 1,
+
+                'message'       : {
+                                    "integer"   : 1,
+                                    "string"    : "abcdef",
+                                    "time"      : "13:24:30",
+                                    "datetime"  : "2015-01-01 00:00:00",
+                                    "datetime_wrong" : "asdf",
+                                    "time_wrong"    : "asdf",
+
+                                },
+                // 'meta'    : {"1":{"ruleid":1,"exec_order":1,"conditions":{"100":{"cid":100,"lval":-1,"op":">","rval":"0","d":false},"101":{"cid":101,"lval":-1,"op":">=","rval":"1","d":false}},"applied":false,"actions":{}},"2":{"ruleid":2,"exec_order":0,"conditions":{"3":{"cid":3,"lval":-1,"op":">","rval":"0","d":false}},"applied":false,"actions":{}}},
+
+                'output'        : {
+                                    "integer"   : 1,
+                                    "string"    : "abcdef",
+                                    "time"      : "13:24:30",
+                                    "datetime"  : "2015-01-01 00:00:00",
+                                    "datetime_wrong" : "asdf",
+                                    "time_wrong"    : "asdf",
+
+                                    "wrong" : true,
+                                },
             },
 
 

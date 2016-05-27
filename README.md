@@ -55,11 +55,13 @@ Each condition has 4 parts
 > ('datetimerange', 'In DateTime Range (datetimerange )'),
 > ('!datetimerange', 'Not In DateTime Range (!datetimerange )'),
 > NOTE : ALWAYS specify datetime in YYYY-MM-DD HH:mm:ss format
->
+> NOTE 2 : if datetimeformat is invalid then that condition is given benefit of doubt and marked as null. Same is true of condition value is also not correct datetime value
+> 
 > + ('timerange', 'In Time Range ( timerange )'),
 > ('!timerange', 'Not In Time Range ( !timerange )'),
 > NOTE : format HH:mm:ss~HH:mm:ss
->
+> NOTE 2 : if time is invalid then that condition is given benefit of doubt and marked as null. Same is true of condition value is also not correct datetime value
+> 
 > + ('regex', 'In Regex ( regex )'),
 > ('!regex', 'Not In Regex ( !regex)'),
 >
