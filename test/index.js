@@ -105,7 +105,7 @@ describe("Basic Operator Test Suite with rules", function () {
             },
             {
                 'testCaseName'  : '#2 Should not pass a natural number check for 0',
-                'rules_executed' : 4,
+                'rules_executed' : 5,
 
                 'message'       : {
                                     "integer" : 0
@@ -113,19 +113,19 @@ describe("Basic Operator Test Suite with rules", function () {
 
                 // 'meta'    : {"1":{"ruleid":1,"exec_order":1,"conditions":{"100":{"cid":100,"lval":0,"op":">","rval":"0","d":false},"101":{"cid":101,"lval":0,"op":">=","rval":"1","d":false}},"applied":false,"actions":{}},"2":{"ruleid":2,"exec_order":0,"conditions":{"3":{"cid":3,"lval":0,"op":">","rval":"0","d":false}},"applied":false,"actions":{}}},
 
-                'output'        : {"integer" : 0, 'is_weird' : 1},
+                'output'        : {"integer" : 0, 'is_weird' : 1, 'template_eval_val': 1},
 
             },
             {
                 'testCaseName'  : '#3 Should not pass a natural number check for negative numbers',
-                'rules_executed' : 4,
+                'rules_executed' : 5,
 
                 'message'       : {
                                     "integer" : -1
                                 },
                 // 'meta'    : {"1":{"ruleid":1,"exec_order":1,"conditions":{"100":{"cid":100,"lval":-1,"op":">","rval":"0","d":false},"101":{"cid":101,"lval":-1,"op":">=","rval":"1","d":false}},"applied":false,"actions":{}},"2":{"ruleid":2,"exec_order":0,"conditions":{"3":{"cid":3,"lval":-1,"op":">","rval":"0","d":false}},"applied":false,"actions":{}}},
 
-                'output'        : {"integer" : -1, 'is_weird' : 1, 'eval_val': 2},
+                'output'        : {"integer" : -1, 'is_weird' : 1, 'eval_val': 2, 'template_eval_val': 0},
             },
 
             {
@@ -158,6 +158,22 @@ describe("Basic Operator Test Suite with rules", function () {
                 // 'meta'    : {"1":{"ruleid":1,"exec_order":1,"conditions":{"100":{"cid":100,"lval":-1,"op":">","rval":"0","d":false},"101":{"cid":101,"lval":-1,"op":">=","rval":"1","d":false}},"applied":false,"actions":{}},"2":{"ruleid":2,"exec_order":0,"conditions":{"3":{"cid":3,"lval":-1,"op":">","rval":"0","d":false}},"applied":false,"actions":{}}},
 
                 'output'        : { 'integer': 1, 'string': 'abcdef', 'time': '13:24:30', 'datetime': '2015-01-01 00:00:00', 'eval_val' : 2 },
+            },
+
+            {
+                'testCaseName'  : '#6 Template Eval',
+                'tag_to_exec'   : 'template_eval',
+                'rules_executed': 1,
+
+                'message'       : {
+                                    "integer"   : 1,
+                                    "string"    : "abcdef",
+                                    "time"      : "13:24:30",
+                                    "datetime"  : "2015-01-01 00:00:00"
+                                },
+                // 'meta'    : {"1":{"ruleid":1,"exec_order":1,"conditions":{"100":{"cid":100,"lval":-1,"op":">","rval":"0","d":false},"101":{"cid":101,"lval":-1,"op":">=","rval":"1","d":false}},"applied":false,"actions":{}},"2":{"ruleid":2,"exec_order":0,"conditions":{"3":{"cid":3,"lval":-1,"op":">","rval":"0","d":false}},"applied":false,"actions":{}}},
+
+                'output'        : { 'integer': 1, 'string': 'abcdef', 'time': '13:24:30', 'datetime': '2015-01-01 00:00:00', 'template_eval_val' : 2 },
             },
 
 

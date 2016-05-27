@@ -639,7 +639,7 @@ YKW.prototype.__applyActionDangerousEval = function(msg, action, rule, actionMet
     // JSHINT for eval
     if (typeof action.value === "function") actVal = actVal(msg);
 
-    _.set(msg,  actKey, eval(action.value));
+    _.set(msg,  actKey, eval(actVal));
 
     // set Meta
     actionMeta.key = actKey;

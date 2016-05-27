@@ -335,7 +335,7 @@ var rules  = [
        "name": "Template conditional op and complex conditions",
        "externalReference": "",
        "conditionsOperator": "<%= c[0] %> && ( <%= c[1] %> || <%= c[2] %> )",
-       "priority": 300001,
+       "priority": 400001,
        "tags": [
            "template_condition",
        ],
@@ -365,6 +365,28 @@ var rules  = [
                 'action' : "DANGEROUS_EVAL",
                 'key'    : "eval_val",
                 'value'  : "1*2"
+            }
+       ]
+    },
+
+
+    {
+       "id": 5,
+       "name": "0 condition, template eval",
+       "externalReference": "",
+       "conditionsOperator": "&&",
+       "priority": 500001,
+       "tags": [
+           "template_eval",
+       ],
+       "conditions": [
+       ],
+       "actions": [
+           {
+                'id'     : 501,
+                'action' : "DANGEROUS_EVAL",
+                'key'    : "template_eval_val",
+                'value'  : "<%= integer %> + 1"
             }
        ]
     },
