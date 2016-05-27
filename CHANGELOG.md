@@ -1,8 +1,13 @@
 
-## v0.0.8 (2016-05-19)
+## v0.0.9
+- Test cases giving around 93% coverage
+- Returning Meta in every call
+
+
+## v0.0.8
 Stable version after discarding async crap
 
-## v0.0.7 (2016-02-24)
+## v0.0.7
 
 Features :
 

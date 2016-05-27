@@ -15,7 +15,7 @@ Rule engine for most of generic decisions and flow control ... Gui will follow s
 - *Description*   : Personal comments for a rule
 - *External Reference*    : If rules are created by some other entity, this is used to create that bonding
 - *Status*    : obvious
-- *Priority*  : Lower the integer value, higher the priority.
+- *Priority*  : Lower the integer value, higher the priority. Earlier the rule will be executed.
 
 - *Conditonal Operator* : Operator Applied to all conditions to calculate final True/False value for conditions.
     || if all conditions are to be || (ORed)

@@ -346,7 +346,7 @@ YKW.prototype.applyRules = function(msg, tag) {
                 IFF no Condition , then we check finaldecision for null also
             */
             finalDecision       = null,
-            compiledObj         = {};
+            conditionSets         = {};
 
         // Add in Meta
         msgMeta.rules[eachRule.id] = ruleMeta;
@@ -402,6 +402,9 @@ YKW.prototype.applyRules = function(msg, tag) {
             // Meta
             condMeta.d = cDecision;
 
+            // Save condition decisions for handling compelx templates in conditions
+            _.set(conditionSets,iCondition,cDecision);
+
             /* Check if 1st condition */
             if(iCondition === 0)    finalDecision = cDecision;
             else {
@@ -419,9 +422,6 @@ YKW.prototype.applyRules = function(msg, tag) {
                     // Optimized check . In case of || any condition being true should be enough to decide
                     if (finalDecision === true) break;
                 }
-                else { //for handling complex functions
-                    _.set(compiledObj,iCondition,cDecision);
-                }
             }
 
 
@@ -431,7 +431,12 @@ YKW.prototype.applyRules = function(msg, tag) {
         // Only if condition operator is complex
         if (eachRule.conditionsOperator != R_OPERATORS.AND && eachRule.conditionsOperator != R_OPERATORS.OR) {
             // Example : _.template(' <%= c[0] %> && <%= c[1] %> || <%= c[2] %> && <%= c[3] %>')
-            finalDecision = eval(eachRule.conditionsOperator({'c': compiledObj }));
+            var compiledCondExpr = eachRule.conditionsOperator({'c': conditionSets });
+
+            // save in meta
+            ruleMeta.compiledCondExpr = compiledCondExpr;
+
+            finalDecision = eval(compiledCondExpr);
         }
 
         // Add final Decision in Meta

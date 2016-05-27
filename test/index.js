@@ -80,15 +80,17 @@ describe("Basic Operator Test Suite with rules", function () {
         re.loadRules(reData);
     });
 
-    describe("Natural Number Test", function () {
+    describe("  --> ", function () {
 
         // Write generic test cases here
         [
             // Cases
             {
-                'testCaseName'  : 'Should should pass a natural number check for a positive integer',
+                'testCaseName'  : '#1 Should should pass a natural number check for a positive integer',
 
                 'tag_to_exec'   : 'natural',
+                'rules_executed' : 2,
+
                 'message'       : {
                                     "integer"   : 1,
                                     "string"    : "abcdef",
@@ -96,32 +98,66 @@ describe("Basic Operator Test Suite with rules", function () {
                                     "datetime"  : "2015-01-01 00:00:00"
                                 },
 
-                'meta'    : {"1":{"ruleid":1,"exec_order":1,"conditions":{"100":{"cid":100,"lval":1,"op":">","rval":"0","d":true},"101":{"cid":101,"lval":1,"op":">=","rval":"1","d":true},"102":{"cid":102,"lval":1,"op":"<","rval":"100000","d":true},"103":{"cid":103,"lval":1,"op":"<=","rval":"100000","d":true},"104":{"cid":104,"lval":1,"op":"range","rval":[[1,4294967295]],"d":true},"105":{"cid":105,"lval":1,"op":"!range","rval":[[-100,0]],"d":true},"106":{"cid":106,"lval":"2015-01-01 00:00:00","op":"datetimerange","rval":["2013-12-31T18:30:00.000Z","2015-12-31T18:30:00.000Z"],"d":true},"107":{"cid":107,"lval":"2015-01-01 00:00:00","op":"!datetimerange","rval":["2009-12-31T18:30:00.000Z","2010-12-31T18:30:00.000Z"],"d":true},"108":{"cid":108,"lval":"13:24:30","op":"timerange","rval":["13:00:00 "," 14:00:00"],"d":true},"109":{"cid":109,"lval":"13:24:30","op":"!timerange","rval":["10:00:00 "," 11:00:00"],"d":true},"110":{"cid":110,"lval":"abcdef","op":"regex","rval":{},"d":true},"111":{"cid":111,"lval":"abcdef","op":"!regex","rval":{},"d":true},"112":{"cid":112,"lval":1,"op":"=","rval":"1","d":true},"113":{"cid":113,"lval":1,"op":"!=","rval":"-10","d":true}},"applied":true,"actions":{"2":{"aid":2,"action":"SET_VARIABLE","key":"is_natural","val":1}}},"2":{"ruleid":2,"exec_order":0,"conditions":{"3":{"cid":3,"lval":1,"op":">","rval":"0","d":true}},"applied":true,"actions":{"4":{"aid":4,"action":"EXEC"}}}},
+                // 'meta'    : {"1":{"ruleid":1,"exec_order":1,"conditions":{"100":{"cid":100,"lval":1,"op":">","rval":"0","d":true},"101":{"cid":101,"lval":1,"op":">=","rval":"1","d":true},"102":{"cid":102,"lval":1,"op":"<","rval":"100000","d":true},"103":{"cid":103,"lval":1,"op":"<=","rval":"100000","d":true},"104":{"cid":104,"lval":1,"op":"range","rval":[[1,4294967295]],"d":true},"105":{"cid":105,"lval":1,"op":"!range","rval":[[-100,0]],"d":true},"106":{"cid":106,"lval":"2015-01-01 00:00:00","op":"datetimerange","rval":["2013-12-31T18:30:00.000Z","2015-12-31T18:30:00.000Z"],"d":true},"107":{"cid":107,"lval":"2015-01-01 00:00:00","op":"!datetimerange","rval":["2009-12-31T18:30:00.000Z","2010-12-31T18:30:00.000Z"],"d":true},"108":{"cid":108,"lval":"13:24:30","op":"timerange","rval":["13:00:00 "," 14:00:00"],"d":true},"109":{"cid":109,"lval":"13:24:30","op":"!timerange","rval":["10:00:00 "," 11:00:00"],"d":true},"110":{"cid":110,"lval":"abcdef","op":"regex","rval":{},"d":true},"111":{"cid":111,"lval":"abcdef","op":"!regex","rval":{},"d":true},"112":{"cid":112,"lval":1,"op":"=","rval":"1","d":true},"113":{"cid":113,"lval":1,"op":"!=","rval":"-10","d":true}},"applied":true,"actions":{"2":{"aid":2,"action":"SET_VARIABLE","key":"is_natural","val":1}}},"2":{"ruleid":2,"exec_order":0,"conditions":{"3":{"cid":3,"lval":1,"op":">","rval":"0","d":true}},"applied":true,"actions":{"4":{"aid":4,"action":"EXEC"}}}},
 
 
                 'output'        : { 'integer': 1, 'string': 'abcdef', 'time': '13:24:30', 'datetime': '2015-01-01 00:00:00', 'is_natural': 1, 'eval_val' : 5 },
             },
             {
-                'testCaseName'  : 'Should not pass a natural number check for 0',
+                'testCaseName'  : '#2 Should not pass a natural number check for 0',
+                'rules_executed' : 4,
 
                 'message'       : {
                                     "integer" : 0
                                 },
 
-                'meta'    : {"1":{"ruleid":1,"exec_order":1,"conditions":{"100":{"cid":100,"lval":0,"op":">","rval":"0","d":false},"101":{"cid":101,"lval":0,"op":">=","rval":"1","d":false}},"applied":false,"actions":{}},"2":{"ruleid":2,"exec_order":0,"conditions":{"3":{"cid":3,"lval":0,"op":">","rval":"0","d":false}},"applied":false,"actions":{}}},
+                // 'meta'    : {"1":{"ruleid":1,"exec_order":1,"conditions":{"100":{"cid":100,"lval":0,"op":">","rval":"0","d":false},"101":{"cid":101,"lval":0,"op":">=","rval":"1","d":false}},"applied":false,"actions":{}},"2":{"ruleid":2,"exec_order":0,"conditions":{"3":{"cid":3,"lval":0,"op":">","rval":"0","d":false}},"applied":false,"actions":{}}},
 
-                'output'        : {"integer" : 0},
+                'output'        : {"integer" : 0, 'is_weird' : 1},
 
             },
             {
-                'testCaseName'  : 'Should not pass a natural number check for negative numbers',
+                'testCaseName'  : '#3 Should not pass a natural number check for negative numbers',
+                'rules_executed' : 4,
 
                 'message'       : {
                                     "integer" : -1
                                 },
-                'meta'    : {"1":{"ruleid":1,"exec_order":1,"conditions":{"100":{"cid":100,"lval":-1,"op":">","rval":"0","d":false},"101":{"cid":101,"lval":-1,"op":">=","rval":"1","d":false}},"applied":false,"actions":{}},"2":{"ruleid":2,"exec_order":0,"conditions":{"3":{"cid":3,"lval":-1,"op":">","rval":"0","d":false}},"applied":false,"actions":{}}},
+                // 'meta'    : {"1":{"ruleid":1,"exec_order":1,"conditions":{"100":{"cid":100,"lval":-1,"op":">","rval":"0","d":false},"101":{"cid":101,"lval":-1,"op":">=","rval":"1","d":false}},"applied":false,"actions":{}},"2":{"ruleid":2,"exec_order":0,"conditions":{"3":{"cid":3,"lval":-1,"op":">","rval":"0","d":false}},"applied":false,"actions":{}}},
 
-                'output'        : {"integer" : -1},
+                'output'        : {"integer" : -1, 'is_weird' : 1, 'eval_val': 2},
+            },
+
+            {
+                'testCaseName'  : '#4 Checking all ANTI conditions in OR rule',
+                'tag_to_exec'   : 'or_rule',
+                'rules_executed': 1,
+
+                'message'       : {
+                                    "integer"   : 1,
+                                    "string"    : "abcdef",
+                                    "time"      : "13:24:30",
+                                    "datetime"  : "2015-01-01 00:00:00"
+                                },
+                // 'meta'    : {"1":{"ruleid":1,"exec_order":1,"conditions":{"100":{"cid":100,"lval":-1,"op":">","rval":"0","d":false},"101":{"cid":101,"lval":-1,"op":">=","rval":"1","d":false}},"applied":false,"actions":{}},"2":{"ruleid":2,"exec_order":0,"conditions":{"3":{"cid":3,"lval":-1,"op":">","rval":"0","d":false}},"applied":false,"actions":{}}},
+
+                'output'        : { 'integer': 1, 'string': 'abcdef', 'time': '13:24:30', 'datetime': '2015-01-01 00:00:00', 'is_weird' : 1 },
+            },
+
+            {
+                'testCaseName'  : '#5 Checking template condition and complex conditions',
+                'tag_to_exec'   : 'template_condition',
+                'rules_executed': 1,
+
+                'message'       : {
+                                    "integer"   : 1,
+                                    "string"    : "abcdef",
+                                    "time"      : "13:24:30",
+                                    "datetime"  : "2015-01-01 00:00:00"
+                                },
+                // 'meta'    : {"1":{"ruleid":1,"exec_order":1,"conditions":{"100":{"cid":100,"lval":-1,"op":">","rval":"0","d":false},"101":{"cid":101,"lval":-1,"op":">=","rval":"1","d":false}},"applied":false,"actions":{}},"2":{"ruleid":2,"exec_order":0,"conditions":{"3":{"cid":3,"lval":-1,"op":">","rval":"0","d":false}},"applied":false,"actions":{}}},
+
+                'output'        : { 'integer': 1, 'string': 'abcdef', 'time': '13:24:30', 'datetime': '2015-01-01 00:00:00', 'eval_val' : 2 },
             },
 
 
@@ -137,20 +173,26 @@ describe("Basic Operator Test Suite with rules", function () {
                 // console.log("meta.rules", JSON.stringify(meta.rules, null, 4));
                 // console.log("eachTest.message", eachTest.message);
 
-                _.isEqual(eachTest.output ,eachTest.message).should.equal(true);
+                if(eachTest.output) {
+                    if(!_.isEqual(eachTest.output ,eachTest.message))
+                        console.log("Test going to Fail : output expected, output got", eachTest.output ,eachTest.message);
+                    _.isEqual(eachTest.output ,eachTest.message).should.equal(true);
+                }
 
                 // Meta check
                 check_basic_meta(meta);
                 check_basic_load_meta(meta);
-                check_rule_count_and_hash(meta, 2);
+
+                if(eachTest.rules_executed)
+                    check_rule_count_and_hash(meta, eachTest.rules_executed);
 
                 // Checking rules which were applied
-                // if(eachTest.meta) {
-                //     console.log("Msg meta ", JSON.stringify(meta.rules, null, 1));
-                //     console.log("eachTest.meta ", JSON.stringify(eachTest.meta, null, 1));
+                if(eachTest.meta) {
+                    console.log("Msg meta ", JSON.stringify(meta.rules, null, 1));
+                    console.log("eachTest.meta ", JSON.stringify(eachTest.meta, null, 1));
 
-                //     _.isEqual(meta.rules,eachTest.meta).should.equal(true);
-                // }
+                    _.isEqual(meta.rules,eachTest.meta).should.equal(true);
+                }
 
                 done();
 
