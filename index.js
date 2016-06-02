@@ -315,7 +315,7 @@ YKW.prototype.applyRules = function(msg, tag) {
         var
             eachRule            = listofActiveRules[iRule],
 
-            ruleMeta            = {"ruleid" : eachRule.id, 'exec_order' : iRule, 'conditions' : {}, 'applied' : null, 'actions': {} },
+            ruleMeta            = {"ruleid" : eachRule.id, 'exec_order' : iRule, 'condOperator' : eachRule.conditionsOperator , 'conditions' : {}, 'applied' : null, 'actions': {} },
 
             /*
                 finalDecision : null
