@@ -251,7 +251,6 @@ npm run benchmark
 
 ### Todo / improvements / known Bugs
 - Write test cases to use Meta object as well as Rule engine output.
-- Do Benchmarks
 - Support for Custom Blocking/non-blocking sync/async functions is still debatable and is not added as of now
 - Rule Snapshots ? Rule Audits ?
 - How to define a common Rules language ? Currently Rules are picked from DB. Is that standard way , or should we define an API for this ?
