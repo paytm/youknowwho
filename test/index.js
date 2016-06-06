@@ -267,6 +267,29 @@ describe("Basic Operator Test Suite with rules", function () {
                                     "wrong" : true,
                                 },
             },
+            {
+                'testCaseName' : '#10 Should not pass a nature number check for numbers defined as null',
+                'rules_executed' : 9,
+                'message' : {
+                    'integer' : null,
+                    'datetime_wrong' : null,
+                    'time_wrong' : null
+                },
+
+                'output' : {
+                    "integer": null,
+                    "is_weird": 1,
+                    "template_eval_val": 1,
+                    "set_variable_eval": "",
+                    'wrong_cond' : 1,
+                    'true': true,
+                    'false': false,
+                    'null': null,
+                    'wrong' : true,
+                    "datetime_wrong" : null,
+                    "time_wrong"     : null
+                }
+            }
 
 
         ].forEach(function(eachTest){

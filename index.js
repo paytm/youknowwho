@@ -73,7 +73,7 @@ function YKW(opts) {
 
     /* declare common Meta, for each msg we will use cloneDeep*/
     self.masterMeta = {
-        "rules" : {},
+        "rules" : {}
     };
 }
 
@@ -81,6 +81,18 @@ function YKW(opts) {
 YKW.prototype.__checkRange = function(rangeArray, val) {
     // this will nbe null if Range array wasnt parsed properly
     if(rangeArray === null) return null;
+
+    /*
+     If the value passed is null or undefined or a string of invalid numbers , it
+     will definitely NOT lie in the range specified . return false.
+
+     The conversion to string is required since validator gives an exception
+     incase we pass a number to isInt.
+
+     */
+
+
+    if (VALIDATOR.isInt(VALIDATOR.toString(val)) === false) return false;
 
     var result = TRANGE_BINARYSEARCH(rangeArray, val);
     return result;
