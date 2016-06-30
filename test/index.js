@@ -11,6 +11,7 @@ var
     _           = require('lodash'),
     should      = require("should"),
     ykw         = require('../'),
+    assert      = require('assert'),
     reData      = require('./ruleDataSet'),
     re          = new ykw();
 
@@ -98,7 +99,7 @@ describe("Basic Operator Test Suite with rules", function () {
                                     "datetime"  : "2015-01-01 00:00:00"
                                 },
 
-                // 'meta'    : {"1":{"ruleid":1,"exec_order":1,"conditions":{"100":{"cid":100,"lval":1,"op":">","rval":"0","d":true},"101":{"cid":101,"lval":1,"op":">=","rval":"1","d":true},"102":{"cid":102,"lval":1,"op":"<","rval":"100000","d":true},"103":{"cid":103,"lval":1,"op":"<=","rval":"100000","d":true},"104":{"cid":104,"lval":1,"op":"range","rval":[[1,4294967295]],"d":true},"105":{"cid":105,"lval":1,"op":"!range","rval":[[-100,0]],"d":true},"106":{"cid":106,"lval":"2015-01-01 00:00:00","op":"datetimerange","rval":["2013-12-31T18:30:00.000Z","2015-12-31T18:30:00.000Z"],"d":true},"107":{"cid":107,"lval":"2015-01-01 00:00:00","op":"!datetimerange","rval":["2009-12-31T18:30:00.000Z","2010-12-31T18:30:00.000Z"],"d":true},"108":{"cid":108,"lval":"13:24:30","op":"timerange","rval":["13:00:00 "," 14:00:00"],"d":true},"109":{"cid":109,"lval":"13:24:30","op":"!timerange","rval":["10:00:00 "," 11:00:00"],"d":true},"110":{"cid":110,"lval":"abcdef","op":"regex","rval":{},"d":true},"111":{"cid":111,"lval":"abcdef","op":"!regex","rval":{},"d":true},"112":{"cid":112,"lval":1,"op":"=","rval":"1","d":true},"113":{"cid":113,"lval":1,"op":"!=","rval":"-10","d":true}},"applied":true,"actions":{"2":{"aid":2,"action":"SET_VARIABLE","key":"is_natural","val":1}}},"2":{"ruleid":2,"exec_order":0,"conditions":{"3":{"cid":3,"lval":1,"op":">","rval":"0","d":true}},"applied":true,"actions":{"4":{"aid":4,"action":"EXEC"}}}},
+                'meta'    : {"1":{"ruleid":1,"exec_order":1,"condOperator":"&&","conditions":{"100":{"cid":100,"lval":1,"op":">","rval":"0","d":true},"101":{"cid":101,"lval":1,"op":">=","rval":"1","d":true},"102":{"cid":102,"lval":1,"op":"<","rval":"100000","d":true},"103":{"cid":103,"lval":1,"op":"<=","rval":"100000","d":true},"104":{"cid":104,"lval":1,"op":"range","rval":[[-4294967295,-1],[1,4294967295]],"d":true},"105":{"cid":105,"lval":1,"op":"!range","rval":[[-100,0]],"d":true},"106":{"cid":106,"lval":"2015-01-01 00:00:00","op":"datetimerange","rval":["2013-12-31T18:30:00.000Z","2015-12-31T18:30:00.000Z"],"d":true},"107":{"cid":107,"lval":"2015-01-01 00:00:00","op":"!datetimerange","rval":["2009-12-31T18:30:00.000Z","2010-12-31T18:30:00.000Z"],"d":true},"108":{"cid":108,"lval":"13:24:30","op":"timerange","rval":["2016-06-30T07:30:00.000Z","2016-06-30T08:30:00.000Z"],"d":true},"109":{"cid":109,"lval":"13:24:30","op":"!timerange","rval":["2016-06-30T04:30:00.000Z","2016-06-30T05:30:00.000Z"],"d":true},"110":{"cid":110,"lval":"abcdef","op":"regex","rval":{},"d":true},"111":{"cid":111,"lval":"abcdef","op":"!regex","rval":{},"d":true},"112":{"cid":112,"lval":1,"op":"=","rval":"1","d":true},"113":{"cid":113,"lval":1,"op":"!=","rval":"-10","d":true}},"applied":true,"actions":{"101":{"aid":101,"action":"SET_VARIABLE","key":"is_natural","val":1},"102":{"aid":102,"action":"RE_EXIT"}}},"2":{"ruleid":2,"exec_order":0,"condOperator":"||","conditions":{"201":{"cid":201,"lval":1,"op":">","rval":"0","d":true}},"applied":true,"actions":{"202":{"aid":202,"action":"DANGEROUS_EVAL","key":"eval_val","val":"2+3"}}}},
 
 
                 'output'        : { 'integer': 1, 'string': 'abcdef', 'time': '13:24:30', 'datetime': '2015-01-01 00:00:00', 'is_natural': 1, 'eval_val' : 5 },
@@ -113,7 +114,7 @@ describe("Basic Operator Test Suite with rules", function () {
                                     "time_wrong"     : "asdf 23:42:#35:wrong_date"
                                 },
 
-                // 'meta'    : {"1":{"ruleid":1,"exec_order":1,"conditions":{"100":{"cid":100,"lval":0,"op":">","rval":"0","d":false},"101":{"cid":101,"lval":0,"op":">=","rval":"1","d":false}},"applied":false,"actions":{}},"2":{"ruleid":2,"exec_order":0,"conditions":{"3":{"cid":3,"lval":0,"op":">","rval":"0","d":false}},"applied":false,"actions":{}}},
+                'meta'    : {"1":{"ruleid":1,"exec_order":1,"condOperator":"&&","conditions":{"100":{"cid":100,"lval":0,"op":">","rval":"0","d":false},"101":{"cid":101,"lval":0,"op":">=","rval":"1","d":false}},"applied":false,"actions":{}},"2":{"ruleid":2,"exec_order":0,"condOperator":"||","conditions":{"201":{"cid":201,"lval":0,"op":">","rval":"0","d":false}},"applied":false,"actions":{}},"3":{"ruleid":3,"exec_order":2,"condOperator":"||","conditions":{"301":{"cid":301,"lval":0,"op":"<","rval":"0","d":false},"302":{"cid":302,"lval":0,"op":"<=","rval":"0","d":true}},"applied":true,"actions":{"301":{"aid":301,"action":"SET_VARIABLE","key":"is_weird","val":1}}},"4":{"ruleid":4,"exec_order":3,"conditions":{"401":{"cid":401,"lval":0,"op":"=","rval":"0","d":true},"402":{"cid":402,"lval":0,"op":">","rval":"0","d":false},"403":{"cid":403,"lval":0,"op":"<","rval":"0","d":false}},"applied":false,"actions":{},"compiledCondExpr":"true && ( false || false )"},"5":{"ruleid":5,"exec_order":4,"condOperator":"&&","conditions":{},"applied":null,"actions":{"501":{"aid":501,"action":"DANGEROUS_EVAL","key":"template_eval_val","val":"0 + 1"}}},"6":{"ruleid":6,"exec_order":5,"condOperator":"&&","conditions":{},"applied":null,"actions":{"601":{"aid":601,"action":"SET_VARIABLE","key":"set_variable_eval","val":"0"}}},"7":{"ruleid":7,"exec_order":6,"condOperator":"&&","conditions":{"701":{"cid":701,"lval":0,"op":"wrong","rval":"0","d":null}},"applied":null,"actions":{"701":{"aid":701,"action":"SET_VARIABLE","key":"wrong_cond","val":1}}},"8":{"ruleid":8,"exec_order":7,"condOperator":"&&","conditions":{},"applied":null,"actions":{"801":{"aid":801,"action":"SET_VARIABLE","key":"true","val":true},"802":{"aid":802,"action":"SET_VARIABLE","key":"false","val":false},"803":{"aid":803,"action":"SET_VARIABLE","key":"null","val":null}}},"9":{"ruleid":9,"exec_order":8,"condOperator":"&&","conditions":{"901":{"cid":901,"lval":null,"op":"datetimerange","rval":[null,null],"d":null},"902":{"cid":902,"lval":null,"op":"timerange","rval":[null,null],"d":null},"903":{"cid":903,"lval":"asdf 23:42:#35:wrong_date","op":"datetimerange","rval":[null,null],"d":null},"904":{"cid":904,"lval":"asdf 23:42:#35:wrong_date","op":"timerange","rval":[null,null],"d":null},"905":{"cid":905,"lval":0,"op":"range","rval":null,"d":null},"906":{"cid":906,"lval":0,"op":"range","rval":[],"d":false},"907":{"cid":907,"lval":0,"op":"range","rval":[[6,7]],"d":false},"908":{"cid":908,"lval":0,"op":"range","rval":[[4,8]],"d":false}},"applied":null,"actions":{"901":{"aid":901,"action":"SET_VARIABLE","key":"wrong","val":true}}},"10":{"ruleid":10,"exec_order":9,"condOperator":"&&","conditions":{},"applied":null,"actions":{"1001":{"aid":1001,"action":"wrong"}}}},
 
                 'output'        : {
                     "integer": 0,
@@ -140,7 +141,7 @@ describe("Basic Operator Test Suite with rules", function () {
                                     "datetime_wrong" : "asdf 23:42:#35:wrong_date",
                                     "time_wrong"     : "asdf 23:42:#35:wrong_date"
                                 },
-                // 'meta'    : {"1":{"ruleid":1,"exec_order":1,"conditions":{"100":{"cid":100,"lval":-1,"op":">","rval":"0","d":false},"101":{"cid":101,"lval":-1,"op":">=","rval":"1","d":false}},"applied":false,"actions":{}},"2":{"ruleid":2,"exec_order":0,"conditions":{"3":{"cid":3,"lval":-1,"op":">","rval":"0","d":false}},"applied":false,"actions":{}}},
+                'meta'    : {"1":{"ruleid":1,"exec_order":1,"condOperator":"&&","conditions":{"100":{"cid":100,"lval":-1,"op":">","rval":"0","d":false},"101":{"cid":101,"lval":-1,"op":">=","rval":"1","d":false}},"applied":false,"actions":{}},"2":{"ruleid":2,"exec_order":0,"condOperator":"||","conditions":{"201":{"cid":201,"lval":-1,"op":">","rval":"0","d":false}},"applied":false,"actions":{}},"3":{"ruleid":3,"exec_order":2,"condOperator":"||","conditions":{"301":{"cid":301,"lval":-1,"op":"<","rval":"0","d":true},"302":{"cid":302,"lval":-1,"op":"<=","rval":"0","d":true}},"applied":true,"actions":{"301":{"aid":301,"action":"SET_VARIABLE","key":"is_weird","val":1}}},"4":{"ruleid":4,"exec_order":3,"conditions":{"401":{"cid":401,"lval":-1,"op":"=","rval":"-1","d":true},"402":{"cid":402,"lval":-1,"op":">","rval":"0","d":false},"403":{"cid":403,"lval":-1,"op":"<","rval":"0","d":true}},"applied":true,"actions":{"401":{"aid":401,"action":"DANGEROUS_EVAL","key":"eval_val","val":"1*2"}},"compiledCondExpr":"true && ( false || true )"},"5":{"ruleid":5,"exec_order":4,"condOperator":"&&","conditions":{},"applied":null,"actions":{"501":{"aid":501,"action":"DANGEROUS_EVAL","key":"template_eval_val","val":"-1 + 1"}}},"6":{"ruleid":6,"exec_order":5,"condOperator":"&&","conditions":{},"applied":null,"actions":{"601":{"aid":601,"action":"SET_VARIABLE","key":"set_variable_eval","val":"-1"}}},"7":{"ruleid":7,"exec_order":6,"condOperator":"&&","conditions":{"701":{"cid":701,"lval":-1,"op":"wrong","rval":"0","d":null}},"applied":null,"actions":{"701":{"aid":701,"action":"SET_VARIABLE","key":"wrong_cond","val":1}}},"8":{"ruleid":8,"exec_order":7,"condOperator":"&&","conditions":{},"applied":null,"actions":{"801":{"aid":801,"action":"SET_VARIABLE","key":"true","val":true},"802":{"aid":802,"action":"SET_VARIABLE","key":"false","val":false},"803":{"aid":803,"action":"SET_VARIABLE","key":"null","val":null}}},"9":{"ruleid":9,"exec_order":8,"condOperator":"&&","conditions":{"901":{"cid":901,"lval":null,"op":"datetimerange","rval":[null,null],"d":null},"902":{"cid":902,"lval":null,"op":"timerange","rval":[null,null],"d":null},"903":{"cid":903,"lval":"asdf 23:42:#35:wrong_date","op":"datetimerange","rval":[null,null],"d":null},"904":{"cid":904,"lval":"asdf 23:42:#35:wrong_date","op":"timerange","rval":[null,null],"d":null},"905":{"cid":905,"lval":-1,"op":"range","rval":null,"d":null},"906":{"cid":906,"lval":-1,"op":"range","rval":[],"d":false},"907":{"cid":907,"lval":-1,"op":"range","rval":[[6,7]],"d":false},"908":{"cid":908,"lval":-1,"op":"range","rval":[[4,8]],"d":false}},"applied":null,"actions":{"901":{"aid":901,"action":"SET_VARIABLE","key":"wrong","val":true}}},"10":{"ruleid":10,"exec_order":9,"condOperator":"&&","conditions":{},"applied":null,"actions":{"1001":{"aid":1001,"action":"wrong"}}}},
 
                 'output'        : {
                     "integer": -1,
@@ -171,7 +172,7 @@ describe("Basic Operator Test Suite with rules", function () {
                                     "time"      : "13:24:30",
                                     "datetime"  : "2015-01-01 00:00:00"
                                 },
-                // 'meta'    : {"1":{"ruleid":1,"exec_order":1,"conditions":{"100":{"cid":100,"lval":-1,"op":">","rval":"0","d":false},"101":{"cid":101,"lval":-1,"op":">=","rval":"1","d":false}},"applied":false,"actions":{}},"2":{"ruleid":2,"exec_order":0,"conditions":{"3":{"cid":3,"lval":-1,"op":">","rval":"0","d":false}},"applied":false,"actions":{}}},
+                'meta'    : {"3":{"ruleid":3,"exec_order":0,"condOperator":"||","conditions":{"301":{"cid":301,"lval":1,"op":"<","rval":"0","d":false},"302":{"cid":302,"lval":1,"op":"<=","rval":"0","d":false},"303":{"cid":303,"lval":1,"op":">","rval":"2","d":false},"304":{"cid":304,"lval":1,"op":">=","rval":"2","d":false},"305":{"cid":305,"lval":1,"op":"range","rval":[[2,4294967295]],"d":false},"306":{"cid":306,"lval":1,"op":"!range","rval":[[-100,2]],"d":false},"307":{"cid":307,"lval":"2015-01-01 00:00:00","op":"datetimerange","rval":["2012-12-31T18:30:00.000Z","2013-12-31T18:30:00.000Z"],"d":false},"308":{"cid":308,"lval":"2015-01-01 00:00:00","op":"!datetimerange","rval":["2012-12-31T18:30:00.000Z","2015-12-31T18:30:00.000Z"],"d":false},"309":{"cid":309,"lval":"13:24:30","op":"timerange","rval":["2016-06-30T07:30:00.000Z","2016-06-30T07:35:00.000Z"],"d":false},"310":{"cid":310,"lval":"13:24:30","op":"!timerange","rval":["2016-06-30T04:30:00.000Z","2016-06-30T09:30:00.000Z"],"d":false},"311":{"cid":311,"lval":"abcdef","op":"regex","rval":{},"d":false},"312":{"cid":312,"lval":"abcdef","op":"!regex","rval":{},"d":false},"313":{"cid":313,"lval":"abcdef","op":"!stringrange","rval":["abcdef","xyz","pqr"],"d":false},"314":{"cid":314,"lval":"abcdef","op":"stringrange","rval":["xyz","pqr"],"d":false},"315":{"cid":315,"lval":1,"op":"set","rval":"2,3","d":false},"316":{"cid":316,"lval":1,"op":"!set","rval":"1,2,3,4,5,6","d":false},"317":{"cid":317,"lval":1,"op":"!=","rval":"1","d":false},"318":{"cid":318,"lval":1,"op":"=","rval":"-10","d":false},"319":{"cid":319,"lval":"2015-01-01 00:00:00","op":"datetimerange","rval":["2015-12-31T18:30:00.000Z","2016-12-31T18:30:00.000Z"],"d":false},"320":{"cid":320,"lval":"13:24:30","op":"timerange","rval":["2016-06-30T08:30:00.000Z","2016-06-30T08:35:00.000Z"],"d":false},"321":{"cid":321,"lval":1,"op":"=","rval":"1","d":true}},"applied":true,"actions":{"301":{"aid":301,"action":"SET_VARIABLE","key":"is_weird","val":1}}}},
 
                 'output'        : { 'integer': 1, 'string': 'abcdef', 'time': '13:24:30', 'datetime': '2015-01-01 00:00:00', 'is_weird' : 1 },
             },
@@ -187,7 +188,7 @@ describe("Basic Operator Test Suite with rules", function () {
                                     "time"      : "13:24:30",
                                     "datetime"  : "2015-01-01 00:00:00"
                                 },
-                // 'meta'    : {"1":{"ruleid":1,"exec_order":1,"conditions":{"100":{"cid":100,"lval":-1,"op":">","rval":"0","d":false},"101":{"cid":101,"lval":-1,"op":">=","rval":"1","d":false}},"applied":false,"actions":{}},"2":{"ruleid":2,"exec_order":0,"conditions":{"3":{"cid":3,"lval":-1,"op":">","rval":"0","d":false}},"applied":false,"actions":{}}},
+                'meta'    : {"4":{"ruleid":4,"exec_order":0,"conditions":{"401":{"cid":401,"lval":1,"op":"=","rval":"1","d":true},"402":{"cid":402,"lval":1,"op":">","rval":"0","d":true},"403":{"cid":403,"lval":1,"op":"<","rval":"0","d":false}},"applied":true,"actions":{"401":{"aid":401,"action":"DANGEROUS_EVAL","key":"eval_val","val":"1*2"}},"compiledCondExpr":"true && ( true || false )"}},
 
                 'output'        : { 'integer': 1, 'string': 'abcdef', 'time': '13:24:30', 'datetime': '2015-01-01 00:00:00', 'eval_val' : 2 },
             },
@@ -203,7 +204,7 @@ describe("Basic Operator Test Suite with rules", function () {
                                     "time"      : "13:24:30",
                                     "datetime"  : "2015-01-01 00:00:00"
                                 },
-                // 'meta'    : {"1":{"ruleid":1,"exec_order":1,"conditions":{"100":{"cid":100,"lval":-1,"op":">","rval":"0","d":false},"101":{"cid":101,"lval":-1,"op":">=","rval":"1","d":false}},"applied":false,"actions":{}},"2":{"ruleid":2,"exec_order":0,"conditions":{"3":{"cid":3,"lval":-1,"op":">","rval":"0","d":false}},"applied":false,"actions":{}}},
+                'meta'    : {"5":{"ruleid":5,"exec_order":0,"condOperator":"&&","conditions":{},"applied":null,"actions":{"501":{"aid":501,"action":"DANGEROUS_EVAL","key":"template_eval_val","val":"1 + 1"}}}},
 
                 'output'        : { 'integer': 1, 'string': 'abcdef', 'time': '13:24:30', 'datetime': '2015-01-01 00:00:00', 'template_eval_val' : 2 },
             },
@@ -219,7 +220,7 @@ describe("Basic Operator Test Suite with rules", function () {
                                     "time"      : "13:24:30",
                                     "datetime"  : "2015-01-01 00:00:00"
                                 },
-                // 'meta'    : {"1":{"ruleid":1,"exec_order":1,"conditions":{"100":{"cid":100,"lval":-1,"op":">","rval":"0","d":false},"101":{"cid":101,"lval":-1,"op":">=","rval":"1","d":false}},"applied":false,"actions":{}},"2":{"ruleid":2,"exec_order":0,"conditions":{"3":{"cid":3,"lval":-1,"op":">","rval":"0","d":false}},"applied":false,"actions":{}}},
+                'meta'    : {"6":{"ruleid":6,"exec_order":0,"condOperator":"&&","conditions":{},"applied":null,"actions":{"601":{"aid":601,"action":"SET_VARIABLE","key":"set_variable_eval","val":"1"}}}},
 
                 'output'        : { 'integer': 1, 'string': 'abcdef', 'time': '13:24:30', 'datetime': '2015-01-01 00:00:00', 'set_variable_eval' : '1' },
             },
@@ -235,7 +236,7 @@ describe("Basic Operator Test Suite with rules", function () {
                                     "time"      : "13:24:30",
                                     "datetime"  : "2015-01-01 00:00:00"
                                 },
-                // 'meta'    : {"1":{"ruleid":1,"exec_order":1,"conditions":{"100":{"cid":100,"lval":-1,"op":">","rval":"0","d":false},"101":{"cid":101,"lval":-1,"op":">=","rval":"1","d":false}},"applied":false,"actions":{}},"2":{"ruleid":2,"exec_order":0,"conditions":{"3":{"cid":3,"lval":-1,"op":">","rval":"0","d":false}},"applied":false,"actions":{}}},
+                'meta'    : {"7":{"ruleid":7,"exec_order":0,"condOperator":"&&","conditions":{"701":{"cid":701,"lval":1,"op":"wrong","rval":"0","d":null}},"applied":null,"actions":{"701":{"aid":701,"action":"SET_VARIABLE","key":"wrong_cond","val":1}}}},
 
                 'output'        : { 'integer': 1, 'string': 'abcdef', 'time': '13:24:30', 'datetime': '2015-01-01 00:00:00', 'wrong_cond' : 1 },
             },
@@ -254,7 +255,7 @@ describe("Basic Operator Test Suite with rules", function () {
                                     "time_wrong"    : "asdf",
 
                                 },
-                // 'meta'    : {"1":{"ruleid":1,"exec_order":1,"conditions":{"100":{"cid":100,"lval":-1,"op":">","rval":"0","d":false},"101":{"cid":101,"lval":-1,"op":">=","rval":"1","d":false}},"applied":false,"actions":{}},"2":{"ruleid":2,"exec_order":0,"conditions":{"3":{"cid":3,"lval":-1,"op":">","rval":"0","d":false}},"applied":false,"actions":{}}},
+                'meta'    : {"9":{"ruleid":9,"exec_order":0,"condOperator":"&&","conditions":{"901":{"cid":901,"lval":"2015-01-01 00:00:00","op":"datetimerange","rval":[null,null],"d":null},"902":{"cid":902,"lval":"13:24:30","op":"timerange","rval":[null,null],"d":null},"903":{"cid":903,"lval":"asdf","op":"datetimerange","rval":[null,null],"d":null},"904":{"cid":904,"lval":"asdf","op":"timerange","rval":[null,null],"d":null},"905":{"cid":905,"lval":1,"op":"range","rval":null,"d":null},"906":{"cid":906,"lval":1,"op":"range","rval":[],"d":false},"907":{"cid":907,"lval":1,"op":"range","rval":[[6,7]],"d":false},"908":{"cid":908,"lval":1,"op":"range","rval":[[4,8]],"d":false}},"applied":null,"actions":{"901":{"aid":901,"action":"SET_VARIABLE","key":"wrong","val":true}}}},
 
                 'output'        : {
                                     "integer"   : 1,
@@ -288,7 +289,8 @@ describe("Basic Operator Test Suite with rules", function () {
                     'wrong' : true,
                     "datetime_wrong" : null,
                     "time_wrong"     : null
-                }
+                },
+                'meta'    : {"1":{"ruleid":1,"exec_order":1,"condOperator":"&&","conditions":{"100":{"cid":100,"lval":null,"op":">","rval":"0","d":false},"101":{"cid":101,"lval":null,"op":">=","rval":"1","d":false}},"applied":false,"actions":{}},"2":{"ruleid":2,"exec_order":0,"condOperator":"||","conditions":{"201":{"cid":201,"lval":null,"op":">","rval":"0","d":false}},"applied":false,"actions":{}},"3":{"ruleid":3,"exec_order":2,"condOperator":"||","conditions":{"301":{"cid":301,"lval":null,"op":"<","rval":"0","d":false},"302":{"cid":302,"lval":null,"op":"<=","rval":"0","d":false},"303":{"cid":303,"lval":null,"op":">","rval":"2","d":false},"304":{"cid":304,"lval":null,"op":">=","rval":"2","d":false},"305":{"cid":305,"lval":null,"op":"range","rval":[[2,4294967295]],"d":false},"306":{"cid":306,"lval":null,"op":"!range","rval":[[-100,2]],"d":true}},"applied":true,"actions":{"301":{"aid":301,"action":"SET_VARIABLE","key":"is_weird","val":1}}},"4":{"ruleid":4,"exec_order":3,"conditions":{"401":{"cid":401,"lval":null,"op":"=","rval":"","d":false},"402":{"cid":402,"lval":null,"op":">","rval":"0","d":false},"403":{"cid":403,"lval":null,"op":"<","rval":"0","d":false}},"applied":false,"actions":{},"compiledCondExpr":"false && ( false || false )"},"5":{"ruleid":5,"exec_order":4,"condOperator":"&&","conditions":{},"applied":null,"actions":{"501":{"aid":501,"action":"DANGEROUS_EVAL","key":"template_eval_val","val":" + 1"}}},"6":{"ruleid":6,"exec_order":5,"condOperator":"&&","conditions":{},"applied":null,"actions":{"601":{"aid":601,"action":"SET_VARIABLE","key":"set_variable_eval","val":""}}},"7":{"ruleid":7,"exec_order":6,"condOperator":"&&","conditions":{"701":{"cid":701,"lval":null,"op":"wrong","rval":"0","d":null}},"applied":null,"actions":{"701":{"aid":701,"action":"SET_VARIABLE","key":"wrong_cond","val":1}}},"8":{"ruleid":8,"exec_order":7,"condOperator":"&&","conditions":{},"applied":null,"actions":{"801":{"aid":801,"action":"SET_VARIABLE","key":"true","val":true},"802":{"aid":802,"action":"SET_VARIABLE","key":"false","val":false},"803":{"aid":803,"action":"SET_VARIABLE","key":"null","val":null}}},"9":{"ruleid":9,"exec_order":8,"condOperator":"&&","conditions":{"901":{"cid":901,"lval":null,"op":"datetimerange","rval":[null,null],"d":null},"902":{"cid":902,"lval":null,"op":"timerange","rval":[null,null],"d":null},"903":{"cid":903,"lval":null,"op":"datetimerange","rval":[null,null],"d":null},"904":{"cid":904,"lval":null,"op":"timerange","rval":[null,null],"d":null},"905":{"cid":905,"lval":null,"op":"range","rval":null,"d":null},"906":{"cid":906,"lval":null,"op":"range","rval":[],"d":false},"907":{"cid":907,"lval":null,"op":"range","rval":[[6,7]],"d":false},"908":{"cid":908,"lval":null,"op":"range","rval":[[4,8]],"d":false}},"applied":null,"actions":{"901":{"aid":901,"action":"SET_VARIABLE","key":"wrong","val":true}}},"10":{"ruleid":10,"exec_order":9,"condOperator":"&&","conditions":{},"applied":null,"actions":{"1001":{"aid":1001,"action":"wrong"}}}},
             },
 
             {
@@ -304,7 +306,8 @@ describe("Basic Operator Test Suite with rules", function () {
                     'integer' : null,
                     'datetime_wrong' : null,
                     'time_wrong' : null
-                }
+                },
+                'meta'    : {"10":{"ruleid":10,"exec_order":0,"condOperator":"&&","conditions":{},"applied":null,"actions":{"1001":{"aid":1001,"action":"wrong"}}}},
             }
 
 
@@ -335,10 +338,12 @@ describe("Basic Operator Test Suite with rules", function () {
 
                 // Checking rules which were applied
                 if(eachTest.meta) {
-                    console.log("Msg meta ", JSON.stringify(meta.rules, null, 1));
-                    console.log("eachTest.meta ", JSON.stringify(eachTest.meta, null, 1));
-
-                    _.isEqual(meta.rules,eachTest.meta).should.equal(true);
+                    var o = _.isEqual(JSON.stringify(meta.rules), JSON.stringify(eachTest.meta));
+                    if(o === false) {
+                        console.log("Msg meta -",eachTest.testCaseName, ' ##', JSON.stringify(meta.rules));
+                        console.log("eachTest.meta ",eachTest.testCaseName, ' ##', JSON.stringify(eachTest.meta));
+                    }
+                    assert(o, "Meta check failed");
                 }
 
                 done();

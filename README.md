@@ -204,7 +204,7 @@ Schema of meta object
 
 Rules, conditions and actions are dictionary based to have easy accessibility
 
-```sh
+```
     {
     "rules": { // Rules object, each key: val is rule id : data
         "1": { // rule ID
@@ -240,6 +240,13 @@ Rules, conditions and actions are dictionary based to have easy accessibility
 ```
 npm run benchmark
 ```
+
+**5 random benchmarks**
+ - ruleengine x 2,826 ops/sec ±9.63% (57 runs sampled)
+ - ruleengine x 2,769 ops/sec ±9.54% (62 runs sampled)
+ - ruleengine x 2,649 ops/sec ±13.87% (43 runs sampled)
+ - ruleengine x 2,964 ops/sec ±4.58% (61 runs sampled)
+ - ruleengine x 2,640 ops/sec ±9.00% (62 runs sampled)
 
 
 ### Theory 
