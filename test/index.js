@@ -105,7 +105,7 @@ describe("Basic Operator Test Suite with rules", function () {
             },
             {
                 'testCaseName'  : '#2 Should not pass a natural number check for 0',
-                'rules_executed' : 9,
+                'rules_executed' : 10,
 
                 'message'       : {
                                     "integer" : 0,
@@ -133,7 +133,7 @@ describe("Basic Operator Test Suite with rules", function () {
             },
             {
                 'testCaseName'  : '#3 Should not pass a natural number check for negative numbers',
-                'rules_executed' : 9,
+                'rules_executed' : 10,
 
                 'message'       : {
                                     "integer" : -1,
@@ -269,7 +269,7 @@ describe("Basic Operator Test Suite with rules", function () {
             },
             {
                 'testCaseName' : '#10 Should not pass a nature number check for numbers defined as null',
-                'rules_executed' : 9,
+                'rules_executed' : 10,
                 'message' : {
                     'integer' : null,
                     'datetime_wrong' : null,
@@ -288,6 +288,22 @@ describe("Basic Operator Test Suite with rules", function () {
                     'wrong' : true,
                     "datetime_wrong" : null,
                     "time_wrong"     : null
+                }
+            },
+
+            {
+                'testCaseName' : '#11 Should not ',
+                'tag_to_exec'   : 'unknown_action',
+                'rules_executed' : 1,
+                'message' : {
+                    'integer' : null,
+                    'datetime_wrong' : null,
+                    'time_wrong' : null
+                },
+                'output' : {
+                    'integer' : null,
+                    'datetime_wrong' : null,
+                    'time_wrong' : null
                 }
             }
 

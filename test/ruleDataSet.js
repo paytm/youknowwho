@@ -564,6 +564,27 @@ var rules  = [
        ]
     },
 
+    {
+       "id": 10,
+       "name": "Unknown action",
+       "externalReference": "",
+       "conditionsOperator": "&&",
+       "priority": 10 * 100001,
+       "tags": [
+          "unknown_action"
+       ],
+       "conditions": [
+       ],
+       "actions": [
+           {
+               "id": 1001,
+               "action": "wrong",
+               "key": "wrong",
+               "value": "true"
+           },
+       ]
+    },
+
 ];
 
 module.exports = rules;

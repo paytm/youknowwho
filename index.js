@@ -34,6 +34,12 @@ var
         DANGEROUS_EVAL          : "DANGEROUS_EVAL"
     },
 
+    R_ACTIONS_REV_MAP   = {
+        RE_EXIT                 : "RE_EXIT",
+        SET_VARIABLE            : "SET_VARIABLE",
+        DANGEROUS_EVAL          : "DANGEROUS_EVAL"
+    },
+
     R_CONDITIONS        = {
         CHECK_VARIABLE          : "CHECK_VARIABLE"
     },
@@ -65,6 +71,35 @@ var
 
         'IS_OF_SET'             : 'set',
         'IS_NOT_OF_SET'         :  '!set'
+    },
+
+    R_COND_OPS_REV_MAP          = {
+        '='             : 'EQUALS',
+        '!='            : 'NOT_EQUALS',
+
+        '>'             : 'GREATER_THAN',
+        '>='            : 'GREATER_THAN_EQ',
+
+        '<'             : 'LESS_THAN',
+        '<='            : 'LESS_THAN_EQ',
+
+        'range'         : 'RANGE',
+        '!range'        : 'NOT_RANGE',
+
+        'datetimerange' : 'DT_RANGE',
+        '!datetimerange': 'NOT_DT_RANGE',
+
+        'timerange'     : 'T_RANGE' ,
+        '!timerange'    : 'NOT_T_RANGE',
+
+        'regex'         : 'REGEX',
+        '!regex'        : 'NOT_REGEX',
+
+        'stringrange'   : 'STRINGRANGE',
+        '!stringrange'  : 'NOT_STRINGRANGE',
+
+        'set'           : 'IS_OF_SET',
+        '!set'          : 'IS_NOT_OF_SET',
     };
 
 function YKW(opts) {
@@ -75,6 +110,107 @@ function YKW(opts) {
     self.masterMeta = {
         "rules" : {}
     };
+
+
+    /*
+        Condition Operations micro functions
+        Initially we used to call checkoperation function which used to call on a switch case
+        and check what operation needs to be applied.
+
+        Now we bind the required operation function at the time of rule loading itself.
+        and save the cost of a operation lookup at the time of every condition.
+    */
+    this.__condOps = {
+
+        /*
+            Each function will receive args : msgVal, cVal where msgVal is lval and cVal is rval
+            funciton has to return true/false/null
+        */
+
+        EQUALS            : function(msgVal, cVal) {
+            return (msgVal==cVal)? true : false;
+        },
+        NOT_EQUALS        : function(msgVal, cVal) {
+            return (msgVal!=cVal)? true : false;
+        },
+        GREATER_THAN      : function(msgVal, cVal) {
+            return (_.parseInt(msgVal) > _.parseInt(cVal))? true : false;
+        },
+        GREATER_THAN_EQ   : function(msgVal, cVal) {
+            return (_.parseInt(msgVal) >= _.parseInt(cVal))? true : false;
+        },
+        LESS_THAN         : function(msgVal, cVal) {
+            return (_.parseInt(msgVal) < _.parseInt(cVal))? true : false;
+        },
+        LESS_THAN_EQ      : function(msgVal, cVal) {
+            return (_.parseInt(msgVal) <= _.parseInt(cVal))? true : false;
+        },
+        RANGE             : function(msgVal, cVal) {
+            return self.__checkRange(cVal, msgVal);
+        },
+        NOT_RANGE         : function(msgVal, cVal) {
+            return !(self.__checkRange(cVal, msgVal));
+        },
+        DT_RANGE          : function(msgVal, cVal) {
+            return self.__checkDateTimeRange(cVal, msgVal);
+        },
+        NOT_DT_RANGE      : function(msgVal, cVal) {
+            return !(self.__checkDateTimeRange(cVal, msgVal));
+        },
+        T_RANGE           : function(msgVal, cVal) {
+            return self.__checkTimeRange(cVal, msgVal);
+        },
+        NOT_T_RANGE       : function(msgVal, cVal) {
+            return !(self.__checkTimeRange(cVal, msgVal));
+        },
+        REGEX             : function(msgVal, cVal) {
+            return self.__checkRegex(cVal, msgVal);
+        },
+        NOT_REGEX         : function(msgVal, cVal) {
+            return !(self.__checkRegex(cVal, msgVal));
+        },
+        STRINGRANGE       : function(msgVal, cVal) {
+            return self.__checkStringRange(cVal, msgVal);
+        },
+        NOT_STRINGRANGE   : function(msgVal, cVal) {
+            return !(self.__checkStringRange(cVal, msgVal));
+        },
+        IS_OF_SET         : function(msgVal, cVal) {
+            return self.__checkIsSet(cVal, msgVal);
+        },
+        IS_NOT_OF_SET     : function(msgVal, cVal) {
+            return !(self.__checkIsSet(cVal, msgVal));
+        },
+
+        // none of the above
+        EMPTY               : function() { return null; }
+    };
+
+    /*
+        Action micro functions
+    */
+    this.__actionOps = {
+
+        /*
+            Each function will receive args : msg, action, rule, actionMeta
+            funciton has to return true/false/null
+        */
+
+        SET_VARIABLE            : function(msg, action, rule, actionMeta) {
+            self.__applyActionSetVariable(msg, action, rule, actionMeta);
+        },
+        RE_EXIT        : function(msg, action, rule, actionMeta) {
+            msg[R_ACTIONS.RE_EXIT] = true;
+        },
+        DANGEROUS_EVAL      : function(msg, action, rule, actionMeta) {
+            self.__applyActionDangerousEval(msg, action, rule, actionMeta);
+        },
+
+        // none of the above
+        EMPTY               : function() {}
+    };
+
+
 }
 
 
@@ -160,150 +296,7 @@ YKW.prototype.__checkIsSet = function (cVal, msgVal) {
     return (_.intersection(cVal, msgVal).length > 0) ? true : false;
 };
 
-YKW.prototype.__checkOperation = function(operation, msgVal, cVal) {
-    /*
-        Self explanatory operations between lval and rval , returns true/false
-        Applies following operations as of now.
-
-        msgVal  : Value from message
-        cVal    : Value from condition
-    */
-
-    var
-        self                = this,
-        result              = null;
-
-    switch(operation) {
-
-        // =
-        case R_COND_OPS.EQUALS : {
-            result = (msgVal==cVal)? true : false;
-            break;
-        }
-
-        // !=
-        case R_COND_OPS.NOT_EQUALS : {
-            result = (msgVal!=cVal)? true : false;
-            break;
-        }
-
-        // >
-        case R_COND_OPS.GREATER_THAN : {
-            result = (_.parseInt(msgVal) > _.parseInt(cVal))? true : false;
-            break;
-        }
-
-        // >=
-        case R_COND_OPS.GREATER_THAN_EQ : {
-            result = (_.parseInt(msgVal) >= _.parseInt(cVal))? true : false;
-            break;
-        }
-
-        // <
-        case R_COND_OPS.LESS_THAN : {
-            result = (_.parseInt(msgVal) < _.parseInt(cVal))? true : false;
-            break;
-        }
-
-        // <=
-        case R_COND_OPS.LESS_THAN_EQ : {
-            result = (_.parseInt(msgVal) <= _.parseInt(cVal))? true : false;
-            break;
-        }
-
-        // range
-        case R_COND_OPS.RANGE : {
-            result = self.__checkRange(cVal, msgVal);
-            break;
-        }
-
-        // not in range
-        case R_COND_OPS.NOT_RANGE : {
-            result = !(self.__checkRange(cVal, msgVal));
-            break;
-        }
-
-        // datetime range
-        case R_COND_OPS.DT_RANGE : {
-            result = self.__checkDateTimeRange(cVal, msgVal);
-            break;
-        }
-
-        // not datetime range
-        case R_COND_OPS.NOT_DT_RANGE : {
-            result = !(self.__checkDateTimeRange(cVal, msgVal));
-            break;
-        }
-
-        // Time range
-        case R_COND_OPS.T_RANGE : {
-            result = self.__checkTimeRange(cVal, msgVal);
-            break;
-        }
-
-        // not Time range
-        case R_COND_OPS.NOT_T_RANGE : {
-            result = !(self.__checkTimeRange(cVal, msgVal));
-            break;
-        }
-
-        // Regex Match
-        case R_COND_OPS.REGEX : {
-            result = self.__checkRegex(cVal, msgVal);
-            break;
-        }
-
-        // not regex match
-        case R_COND_OPS.NOT_REGEX : {
-            result = !(self.__checkRegex(cVal, msgVal));
-            break;
-        }
-
-        // String Match
-        case R_COND_OPS.STRINGRANGE : {
-            result = self.__checkStringRange(cVal, msgVal);
-            break;
-        }
-
-        // not string match
-        case R_COND_OPS.NOT_STRINGRANGE : {
-            result = !(self.__checkStringRange(cVal, msgVal));
-            break;
-        }
-
-
-        case R_COND_OPS.IS_OF_SET : {
-            result = self.__checkIsSet(cVal, msgVal);
-            break;
-        }
-
-        case R_COND_OPS.IS_NOT_OF_SET : {
-            result = !(self.__checkIsSet(cVal, msgVal));
-            break;
-        }
-
-        /* Default decision is NULL */
-        default : {
-        }
-
-    } // Switch
-
-    return result;
-
-};
-
 YKW.prototype.applyRules = function(msg, tag) {
-    /* Apply Rules to a message
-
-        Phase 1 : We apply rules sequentially .. we are starting with a few rules
-
-        Phase 2 : We will need to maintain a HASH of params which can be mapped to message
-        somehow maintain a list of conditions that can be applied
-
-        tag
-            Rules for these atags are executed
-    */
-
     var
         self                = this,
         startTime           = MOMENT(),
@@ -389,7 +382,8 @@ YKW.prototype.applyRules = function(msg, tag) {
             condMeta.op = op;
             condMeta.rval = condValue;
 
-            cDecision = self.__checkOperation(op, msgValue, condValue);
+            // Execute the already bound condition function here for decision
+            cDecision = eachCondition.funcBind(msgValue, condValue);
 
             // Meta
             condMeta.d = cDecision;
@@ -449,13 +443,14 @@ YKW.prototype.applyRules = function(msg, tag) {
                 eachAction   = eachRule.actions[iAction],
 
                 // action meta
-                actionMeta = {"aid" : eachAction.id };
+                actionMeta = {"aid" : eachAction.id,  "action" : eachAction.action };
 
             // Add in Meta
             ruleMeta.actions[eachAction.id] = actionMeta;
 
-            /* This is for Rule Trails , mostly for Debug */
-            self._applyAction(msg, eachAction, eachRule, actionMeta);
+            // actually apply actions
+            eachAction.funcBind(msg, eachAction, eachRule, actionMeta);
+
         }
 
         /*  It is assumed that this action will be the last Action .
@@ -565,41 +560,6 @@ YKW.prototype.__toStringRange = function(refVal) {
     return refVal.split(',');
 };
 
-/*
-   Apply Action
-*/
-YKW.prototype._applyAction = function(msg, action, rule, actionMeta) {
-    var
-        self    = this,
-        act     = _.get(action, "action", null);
-
-    //meta
-    actionMeta.action = act;
-
-    switch(act) {
-
-        // Set variable
-        case R_ACTIONS.SET_VARIABLE : {
-            self.__applyActionSetVariable(msg, action, rule, actionMeta);
-            break;
-        }
-
-        // Quit rule engine and do not test anymore rules
-        case R_ACTIONS.RE_EXIT : {
-            msg[R_ACTIONS.RE_EXIT] = true;
-            break;
-        }
-
-        // eval the expression
-        case R_ACTIONS.DANGEROUS_EVAL : {
-            self.__applyActionDangerousEval(msg, action, rule, actionMeta);
-            break;
-        }
-
-
-    }
-
-};
 
 /*
    Apply Action SET VARIABLE
@@ -806,13 +766,26 @@ YKW.prototype.loadRules = function(receivedRulesArray) {
         // conditions parsing
         for(var icond = 0; icond < _.get(eachRule, 'conditions', []).length; icond ++) {
             eachRule.conditions[icond] = self._parseRuleCondition(eachRule.conditions[icond]);
+
+            /* lets bind the function which will be used */
+            var opEnum = R_COND_OPS_REV_MAP[eachRule.conditions[icond].operation];
+
+            if(self.__condOps.hasOwnProperty(opEnum) === true) {
+                eachRule.conditions[icond].funcBind = self.__condOps[opEnum];
+            } else eachRule.conditions[icond].funcBind = self.__condOps.EMPTY;
         }
 
         // action parsing
         for(var iact = 0; iact < _.get(eachRule, 'actions', []).length; iact ++) {
             eachRule.actions[iact] = self._parseRuleAction(eachRule.actions[iact]);
-        }
 
+            var actEnum = R_ACTIONS_REV_MAP[eachRule.actions[iact].action];
+
+            if(self.__actionOps.hasOwnProperty(actEnum) === true) {
+                eachRule.actions[iact].funcBind = self.__actionOps[actEnum];
+            } else eachRule.actions[iact].funcBind = self.__actionOps.EMPTY;
+
+        }
     }
 
 
