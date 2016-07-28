@@ -13,6 +13,7 @@ var
     ykw         = require('../'),
     assert      = require('assert'),
     reData      = require('./ruleDataSet'),
+    M           = require('moment'),
     re          = new ykw();
 
 
@@ -73,6 +74,29 @@ describe("Rule Engine Test Suite for empty rules" , function () {
 
     });
 
+    it("Test getLoadedMeta uniqueConditionKeys uniqueActionKeys", function (done) {
+        var message = {
+            "integer" : 1
+        };
+        re.loadRules(reData);
+
+        // check unique condition values
+        var masterMeta = re.getLoadedMeta();
+
+        assert(JSON.stringify(masterMeta.rules_load.uniqueConditionKeys),
+            '["integer","datetime","time","string","datetime_wrong","time_wrong"]',
+            "Unique condition keys"
+        );
+
+        assert(JSON.stringify(masterMeta.rules_load.uniqueActionKeys),
+            '["eval_val","is_natural","","is_weird","template_eval_val","integer","set_variable_eval","wrong_cond","true","false","null","wrong"]',
+            'Uniq Action Keys'
+        );
+
+        done();
+    });
+
+
 });
 
 describe("Basic Operator Test Suite with rules", function () {
@@ -99,8 +123,7 @@ describe("Basic Operator Test Suite with rules", function () {
                                     "datetime"  : "2015-01-01 00:00:00"
                                 },
 
-                'meta'    : {"1":{"ruleid":1,"exec_order":1,"condOperator":"&&","conditions":{"100":{"cid":100,"lval":1,"op":">","rval":"0","d":true},"101":{"cid":101,"lval":1,"op":">=","rval":"1","d":true},"102":{"cid":102,"lval":1,"op":"<","rval":"100000","d":true},"103":{"cid":103,"lval":1,"op":"<=","rval":"100000","d":true},"104":{"cid":104,"lval":1,"op":"range","rval":[[-4294967295,-1],[1,4294967295]],"d":true},"105":{"cid":105,"lval":1,"op":"!range","rval":[[-100,0]],"d":true},"106":{"cid":106,"lval":"2015-01-01 00:00:00","op":"datetimerange","rval":["2013-12-31T18:30:00.000Z","2015-12-31T18:30:00.000Z"],"d":true},"107":{"cid":107,"lval":"2015-01-01 00:00:00","op":"!datetimerange","rval":["2009-12-31T18:30:00.000Z","2010-12-31T18:30:00.000Z"],"d":true},"108":{"cid":108,"lval":"13:24:30","op":"timerange","rval":["2016-06-30T07:30:00.000Z","2016-06-30T08:30:00.000Z"],"d":true},"109":{"cid":109,"lval":"13:24:30","op":"!timerange","rval":["2016-06-30T04:30:00.000Z","2016-06-30T05:30:00.000Z"],"d":true},"110":{"cid":110,"lval":"abcdef","op":"regex","rval":{},"d":true},"111":{"cid":111,"lval":"abcdef","op":"!regex","rval":{},"d":true},"112":{"cid":112,"lval":1,"op":"=","rval":"1","d":true},"113":{"cid":113,"lval":1,"op":"!=","rval":"-10","d":true}},"applied":true,"actions":{"101":{"aid":101,"action":"SET_VARIABLE","key":"is_natural","val":1},"102":{"aid":102,"action":"RE_EXIT"}}},"2":{"ruleid":2,"exec_order":0,"condOperator":"||","conditions":{"201":{"cid":201,"lval":1,"op":">","rval":"0","d":true}},"applied":true,"actions":{"202":{"aid":202,"action":"DANGEROUS_EVAL","key":"eval_val","val":"2+3"}}}},
-
+                'meta'    : {"1":{"ruleid":1,"exec_order":1,"condOperator":"&&","conditions":{"100":{"cid":100,"lval":1,"op":">","rval":"0","d":true},"101":{"cid":101,"lval":1,"op":">=","rval":"1","d":true},"102":{"cid":102,"lval":1,"op":"<","rval":"100000","d":true},"103":{"cid":103,"lval":1,"op":"<=","rval":"100000","d":true},"104":{"cid":104,"lval":1,"op":"range","rval":[[-4294967295,-1],[1,4294967295]],"d":true},"105":{"cid":105,"lval":1,"op":"!range","rval":[[-100,0]],"d":true},"106":{"cid":106,"lval":"2015-01-01 00:00:00","op":"datetimerange","rval":["2013-12-31T18:30:00.000Z","2015-12-31T18:30:00.000Z"],"d":true},"107":{"cid":107,"lval":"2015-01-01 00:00:00","op":"!datetimerange","rval":["2009-12-31T18:30:00.000Z","2010-12-31T18:30:00.000Z"],"d":true},"108":{"cid":108,"lval":"13:24:30","op":"timerange","rval":[ M().format('YYYY-MM-DD') + "T07:30:00.000Z", M().format('YYYY-MM-DD') + "T08:30:00.000Z"],"d":true},"109":{"cid":109,"lval":"13:24:30","op":"!timerange","rval":[M().format('YYYY-MM-DD') + "T04:30:00.000Z",M().format('YYYY-MM-DD') + "T05:30:00.000Z"],"d":true},"110":{"cid":110,"lval":"abcdef","op":"regex","rval":{},"d":true},"111":{"cid":111,"lval":"abcdef","op":"!regex","rval":{},"d":true},"112":{"cid":112,"lval":1,"op":"=","rval":"1","d":true},"113":{"cid":113,"lval":1,"op":"!=","rval":"-10","d":true}},"applied":true,"actions":{"101":{"aid":101,"action":"SET_VARIABLE","key":"is_natural","val":1},"102":{"aid":102,"action":"RE_EXIT"}}},"2":{"ruleid":2,"exec_order":0,"condOperator":"||","conditions":{"201":{"cid":201,"lval":1,"op":">","rval":"0","d":true}},"applied":true,"actions":{"202":{"aid":202,"action":"DANGEROUS_EVAL","key":"eval_val","val":"2+3"}}}},
 
                 'output'        : { 'integer': 1, 'string': 'abcdef', 'time': '13:24:30', 'datetime': '2015-01-01 00:00:00', 'is_natural': 1, 'eval_val' : 5 },
             },
@@ -172,7 +195,7 @@ describe("Basic Operator Test Suite with rules", function () {
                                     "time"      : "13:24:30",
                                     "datetime"  : "2015-01-01 00:00:00"
                                 },
-                'meta'    : {"3":{"ruleid":3,"exec_order":0,"condOperator":"||","conditions":{"301":{"cid":301,"lval":1,"op":"<","rval":"0","d":false},"302":{"cid":302,"lval":1,"op":"<=","rval":"0","d":false},"303":{"cid":303,"lval":1,"op":">","rval":"2","d":false},"304":{"cid":304,"lval":1,"op":">=","rval":"2","d":false},"305":{"cid":305,"lval":1,"op":"range","rval":[[2,4294967295]],"d":false},"306":{"cid":306,"lval":1,"op":"!range","rval":[[-100,2]],"d":false},"307":{"cid":307,"lval":"2015-01-01 00:00:00","op":"datetimerange","rval":["2012-12-31T18:30:00.000Z","2013-12-31T18:30:00.000Z"],"d":false},"308":{"cid":308,"lval":"2015-01-01 00:00:00","op":"!datetimerange","rval":["2012-12-31T18:30:00.000Z","2015-12-31T18:30:00.000Z"],"d":false},"309":{"cid":309,"lval":"13:24:30","op":"timerange","rval":["2016-06-30T07:30:00.000Z","2016-06-30T07:35:00.000Z"],"d":false},"310":{"cid":310,"lval":"13:24:30","op":"!timerange","rval":["2016-06-30T04:30:00.000Z","2016-06-30T09:30:00.000Z"],"d":false},"311":{"cid":311,"lval":"abcdef","op":"regex","rval":{},"d":false},"312":{"cid":312,"lval":"abcdef","op":"!regex","rval":{},"d":false},"313":{"cid":313,"lval":"abcdef","op":"!stringrange","rval":["abcdef","xyz","pqr"],"d":false},"314":{"cid":314,"lval":"abcdef","op":"stringrange","rval":["xyz","pqr"],"d":false},"315":{"cid":315,"lval":1,"op":"set","rval":"2,3","d":false},"316":{"cid":316,"lval":1,"op":"!set","rval":"1,2,3,4,5,6","d":false},"317":{"cid":317,"lval":1,"op":"!=","rval":"1","d":false},"318":{"cid":318,"lval":1,"op":"=","rval":"-10","d":false},"319":{"cid":319,"lval":"2015-01-01 00:00:00","op":"datetimerange","rval":["2015-12-31T18:30:00.000Z","2016-12-31T18:30:00.000Z"],"d":false},"320":{"cid":320,"lval":"13:24:30","op":"timerange","rval":["2016-06-30T08:30:00.000Z","2016-06-30T08:35:00.000Z"],"d":false},"321":{"cid":321,"lval":1,"op":"=","rval":"1","d":true}},"applied":true,"actions":{"301":{"aid":301,"action":"SET_VARIABLE","key":"is_weird","val":1}}}},
+                'meta'    : {"3":{"ruleid":3,"exec_order":0,"condOperator":"||","conditions":{"301":{"cid":301,"lval":1,"op":"<","rval":"0","d":false},"302":{"cid":302,"lval":1,"op":"<=","rval":"0","d":false},"303":{"cid":303,"lval":1,"op":">","rval":"2","d":false},"304":{"cid":304,"lval":1,"op":">=","rval":"2","d":false},"305":{"cid":305,"lval":1,"op":"range","rval":[[2,4294967295]],"d":false},"306":{"cid":306,"lval":1,"op":"!range","rval":[[-100,2]],"d":false},"307":{"cid":307,"lval":"2015-01-01 00:00:00","op":"datetimerange","rval":["2012-12-31T18:30:00.000Z","2013-12-31T18:30:00.000Z"],"d":false},"308":{"cid":308,"lval":"2015-01-01 00:00:00","op":"!datetimerange","rval":["2012-12-31T18:30:00.000Z","2015-12-31T18:30:00.000Z"],"d":false},"309":{"cid":309,"lval":"13:24:30","op":"timerange","rval":[ M().format('YYYY-MM-DD') + "T07:30:00.000Z",M().format('YYYY-MM-DD') + "T07:35:00.000Z"],"d":false},"310":{"cid":310,"lval":"13:24:30","op":"!timerange","rval":[M().format('YYYY-MM-DD') + "T04:30:00.000Z",M().format('YYYY-MM-DD') + "T09:30:00.000Z"],"d":false},"311":{"cid":311,"lval":"abcdef","op":"regex","rval":{},"d":false},"312":{"cid":312,"lval":"abcdef","op":"!regex","rval":{},"d":false},"313":{"cid":313,"lval":"abcdef","op":"!stringrange","rval":["abcdef","xyz","pqr"],"d":false},"314":{"cid":314,"lval":"abcdef","op":"stringrange","rval":["xyz","pqr"],"d":false},"315":{"cid":315,"lval":1,"op":"set","rval":"2,3","d":false},"316":{"cid":316,"lval":1,"op":"!set","rval":"1,2,3,4,5,6","d":false},"317":{"cid":317,"lval":1,"op":"!=","rval":"1","d":false},"318":{"cid":318,"lval":1,"op":"=","rval":"-10","d":false},"319":{"cid":319,"lval":"2015-01-01 00:00:00","op":"datetimerange","rval":["2015-12-31T18:30:00.000Z","2016-12-31T18:30:00.000Z"],"d":false},"320":{"cid":320,"lval":"13:24:30","op":"timerange","rval":[M().format('YYYY-MM-DD') + "T08:30:00.000Z",M().format('YYYY-MM-DD') + "T08:35:00.000Z"],"d":false},"321":{"cid":321,"lval":1,"op":"=","rval":"1","d":true}},"applied":true,"actions":{"301":{"aid":301,"action":"SET_VARIABLE","key":"is_weird","val":1}}}},
 
                 'output'        : { 'integer': 1, 'string': 'abcdef', 'time': '13:24:30', 'datetime': '2015-01-01 00:00:00', 'is_weird' : 1 },
             },

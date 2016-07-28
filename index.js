@@ -19,6 +19,7 @@ var
 
     /* NPM Paytm */
     TRANGE_BINARYSEARCH = require('tiny-range-binarysearch'),
+    GLTV                = require('get-lodash-template-vars'),
 
 
     /* Global Variables */
@@ -107,9 +108,7 @@ function YKW(opts) {
     self.opts = opts;
 
     /* declare common Meta, for each msg we will use cloneDeep*/
-    self.masterMeta = {
-        "rules" : {}
-    };
+    self.masterMeta = {};
 
 
     /*
@@ -314,6 +313,9 @@ YKW.prototype.applyRules = function(msg, tag) {
     // In case no rules are found
     if(!UTIL.isArray(listofActiveRules)) listofActiveRules = [];
 
+    // empty rules in meta
+    msgMeta.rules = {};
+
     // Each Rule
     for(var iRule = 0; iRule < listofActiveRules.length; iRule ++) {
 
@@ -487,27 +489,6 @@ YKW.prototype.__toBoolOrNull = function(refVal) {
 };
 
 
-/*
-    doc/ruleEngine
-    # Variables in Action Values
-
-    - Almost all message properties can be used in Action Values as variables
-    - The Syntax for variables is <%= userdata.amount %>
-    E.g. This is not done. We have <%= userdata.amount %> with us. Your number is<%= userdata.number %> . OKay
-
-    - Please note it is a direct replacement function and we use LODASH.template for this.
-
-*/
-YKW.prototype.__toCompiledString = function(refVal) {
-    if (typeof refVal !== 'string') return refVal;
-
-    // a Simple optimization where we dont need to keep compiled function
-    if(refVal.indexOf('<%=') <= -1) return refVal;
-
-    // Lets compile it
-    return _.template(refVal);
-};
-
 
 /*
     converts 2015-06-23 15:00:00 ~ 2015-06-23 16:00:00
@@ -615,6 +596,10 @@ YKW.prototype._parseRuleCondition = function(condition) {
 
      */
     if (condition.value && condition.value.indexOf('<%=') > -1) {
+        // split the lodash template to get keys which are being used in value
+        // NOTE: Always call this before _.template function since it expects string arg and not function
+        condition.valueKeys = GLTV(condition.value);
+
         condition.value = _.template(condition.value);
     } else {
         condition = self._parseCondition(condition);
@@ -675,37 +660,55 @@ YKW.prototype._parseCondition = function (condition) {
 /*
     Pre Parse Rule Action Values based
     This is done at the time of Rules Loading to make rule executions faster
+
+    # Variables in Action Values
+
+    - Almost all message properties can be used in Action Values as variables
+    - The Syntax for variables is <%= userdata.amount %>
+    E.g. This is not done. We have <%= userdata.amount %> with us. Your number is<%= userdata.number %> . OKay
+
+    - Please note it is a direct replacement function and we use LODASH.template for this.
 */
 YKW.prototype._parseRuleAction = function(action) {
 
-    var self = this;
+    var
+        self    = this,
+        actVal  = _.get(action , "value", null);
 
-    // If Rule Action values have true / false, then lets parse it to Boolean
-    _.set(action, "value", self.__toBoolOrNull(_.get(action , "value", null)));
+    action.value =  self.__toBoolOrNull(actVal);
 
-    // Compiled string ( variable based )
-    _.set(action, "value", self.__toCompiledString(_.get(action , "value", null)));
+    if(typeof actVal == 'string' && actVal.indexOf('<%=') > -1) {
+        // split the lodash template to get keys which are being used in value
+        // NOTE: Always call this before _.template function since it expects string arg and not function
+        action.valueKeys = GLTV(action.value);
+
+        action.value = _.template(action.value);
+    }
 
     return action;
 };
 
 
 /*
-    Here We load rules from Database.
-    And keep reloading every 5 minutes or so ...
+   Can we called as many times as possible. Sync function so takes a toll on processing power.
  */
 
 YKW.prototype.loadRules = function(receivedRulesArray) {
     var
-        self        = this,
-        result      = [],
+        self                    = this,
+        result                  = [],
 
-        rulesArray  = _.cloneDeep(receivedRulesArray),
+        rulesArray              = _.cloneDeep(receivedRulesArray),
 
-        startTime   = MOMENT(),
-        endTime     = null,
+        startTime               = MOMENT(),
+        endTime                 = null,
 
-        hash        = CRYPTO.createHash('md5').update(JSON.stringify(rulesArray)).digest("hex");
+        // to capture all the keys which are used in conditions and actions
+        uCKeys                  = [],
+        uAKeys                  = [],
+
+        hash                    = CRYPTO.createHash('md5').update(JSON.stringify(rulesArray)).digest("hex");
+
 
     // set HASH in meta .. Now we can dirty the rulesArray
     _.set(self.masterMeta, "rules_load.hash", hash);
@@ -767,6 +770,14 @@ YKW.prototype.loadRules = function(receivedRulesArray) {
         for(var icond = 0; icond < _.get(eachRule, 'conditions', []).length; icond ++) {
             eachRule.conditions[icond] = self._parseRuleCondition(eachRule.conditions[icond]);
 
+            // Lets take out the key on which condition is applied
+            var cKey = eachRule.conditions[icond].key;
+            if (uCKeys.indexOf(cKey) === -1) uCKeys.push(cKey);
+            
+            //Lets check if condition has valueKeys or not.
+            if(Array.isArray(eachRule.conditions[icond].valueKeys))
+                uCKeys = _.union(uCKeys, eachRule.conditions[icond].valueKeys);
+
             /* lets bind the function which will be used */
             var opEnum = R_COND_OPS_REV_MAP[eachRule.conditions[icond].operation];
 
@@ -778,6 +789,14 @@ YKW.prototype.loadRules = function(receivedRulesArray) {
         // action parsing
         for(var iact = 0; iact < _.get(eachRule, 'actions', []).length; iact ++) {
             eachRule.actions[iact] = self._parseRuleAction(eachRule.actions[iact]);
+
+            // Lets take out the key on which action is applied
+            var aKey = eachRule.actions[iact].key;
+            if (uAKeys.indexOf(aKey) === -1) uAKeys.push(aKey);
+            
+            // Also parse the value in action has valueKeys
+            if(Array.isArray(eachRule.actions[iact].valueKeys))
+                uAKeys = _.union(uAKeys, eachRule.actions[iact].valueKeys);
 
             var actEnum = R_ACTIONS_REV_MAP[eachRule.actions[iact].action];
 
@@ -818,7 +837,22 @@ YKW.prototype.loadRules = function(receivedRulesArray) {
     _.set(self.masterMeta, 'rules_load.load_end', endTime.format('x'));
     _.set(self.masterMeta, 'rules_load.load_exec_time', endTime.diff(startTime));
 
+    // capture unique condition keys and unique action keys
+    _.set(self.masterMeta, "rules_load.uniqueConditionKeys", uCKeys);
+    _.set(self.masterMeta, "rules_load.uniqueActionKeys", uAKeys);
+
+
     return hash;
 };
+
+
+/*
+    Returns master Meta info
+ */
+
+YKW.prototype.getLoadedMeta = function() {
+    return this.masterMeta;
+}
+
 
 module.exports = YKW;

@@ -4,7 +4,7 @@ Rule engine for most of generic decisions and flow control ... Gui will follow s
 [![Build Status](https://travis-ci.org/paytm/youknowwho.svg?branch=master)](https://travis-ci.org/paytm/youknowwho)
 [![Coverage Status](https://coveralls.io/repos/github/paytm/youknowwho/badge.svg?branch=master)](https://coveralls.io/github/paytm/youknowwho?branch=master)
 
-# Opts to instantiate
+# Opts to instantiate ( deprecated )
 - *debug*         : BOOLEAN . Will start emitting Debug Events. NOTE : Will SLOW DOWN the rule engine since Event Emitter is panifully Slow. ( Tag 0.0.7 ) UPDATED : wont emit debug logs anymore
 
 
@@ -95,7 +95,7 @@ Each Action will have 3 parts
 - **normal string** : any string other than above two will be treated as a normal string.
 
 
-## Custom Function in Actions
+## Custom Function in Actions ( Just in theory, not implemented as of now)
 The function is expected to be in following format
 
 ```sh
@@ -118,17 +118,6 @@ function custom(callback, arg) {
 
 ### Logs and Debugging
 ( Tag 0.0.7 ) UPDATED : wont emit logs anymore. This will be taken care by Meta object
-
-
-### Rules Source/Save
-Rules are to be submitted in Following Form : Array of Rules order by priority ( 1 being highest ). Ideally only Active Rules should be submitted.
-
-Each rule is a dictionary : Object having following Keys :
-
-| r_id | r_name | r_exref | r_tags | r_condop | r_priority | r_status | r_c_id | r_c_condition | r_c_key | r_c_op | r_c_value | r_a_id | r_a_action | r_a_key | r_a_value |
-
-This means a lot of repeative information, but we find it easy to maintain a tabular structure.
-Maybe we will change it later to a more JSONified format
 
 
 ### GUI ?
@@ -196,6 +185,29 @@ Var arrayOfRules = [
 
 ### Rule Engine Hash ( loaded_hash )
 This calculates a hash of loaded rules , which helps in audit. This is a simple md5 hash.
+
+
+### Rule Engine Cache assist
+It might be possible for the user to cache the input and output of the rule engine. An input object can contain any number of keys but the keys on which conditions are applied are the actual keys which give the rule engine its dynamic nature. After rules are loaded user can call `getLoadedMeta` to get loaded rules hash and array of condition keys. 
+User is expected to create a sub object consisting of these condition keys only , hash it and use it for cache.
+Use RULES HASH + HASH of object having condition keys only as Cache Key. value can be Output of the rule engine.
+
+E.g. If condition keys are [key1, key2] and object which is generally passed to rule engine is { key1: 1, key2 : 2, key3 : 3}, then user should create a smaller object { key1: 1, key2: 2} , take hash of this, and append loaded-rules-hash in it and use that as the key of cache.
+
+```
+ruleEngineObject.getLoadedMeta()
+// will return an object like this
+
+{ rules_load:
+   { hash: '3f2ddc875c24b0aabe238a21d9da8e0a',
+     load_start: '1469687197716',
+     load_end: '1469687197727',
+     load_exec_time: 11,
+     uniqueConditionKeys : ['key1', 'key2'],
+     uniqueActionKeys : ['keyA', 'keyB']
+    } 
+ }
+```
 
 ### Meta Object
 Meta object saves the state of each rule , condition and action with variups required timestamps. It is not in the scope of this project to analyze the performace/metrics of the engine/rules.
