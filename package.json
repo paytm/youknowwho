@@ -1,6 +1,6 @@
 {
   "name": "youknowwho",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Rule engine for most of generic decision makings",
   "main": "index.js",
   "scripts": {
@@ -27,7 +27,7 @@
     "tiny-range-binarysearch": "git+https://github.com/paytm/tiny-range-binarysearch.git#v0.0.2",
     "validator": "~5.2.0",
     "moment": "~2.13.0",
-    "get-lodash-template-vars" : "git+https://github.com/paytm/get-lodash-template-vars.git#v0.0.3"
+    "get-lodash-template-vars": "git+https://github.com/paytm/get-lodash-template-vars.git#v0.0.3"
   },
   "devDependencies": {
     "benchmark": "^2.1.0",
