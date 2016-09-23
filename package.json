@@ -1,6 +1,6 @@
 {
   "name": "youknowwho",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Rule engine for most of generic decision makings",
   "main": "index.js",
   "scripts": {
