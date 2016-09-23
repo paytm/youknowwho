@@ -1,11 +1,8 @@
 # youknowwho
-Rule engine for most of generic decisions and flow control ... Gui will follow soon
+Rule engine for most of generic decisions and flow control
 
 [![Build Status](https://travis-ci.org/paytm/youknowwho.svg?branch=master)](https://travis-ci.org/paytm/youknowwho)
 [![Coverage Status](https://coveralls.io/repos/github/paytm/youknowwho/badge.svg?branch=master)](https://coveralls.io/github/paytm/youknowwho?branch=master)
-
-# Opts to instantiate ( deprecated )
-- *debug*         : BOOLEAN . Will start emitting Debug Events. NOTE : Will SLOW DOWN the rule engine since Event Emitter is panifully Slow. ( Tag 0.0.7 ) UPDATED : wont emit debug logs anymore
 
 
 # Rules
@@ -121,7 +118,7 @@ function custom(callback, arg) {
 
 
 ### GUI ?
-We at paytm save rules in Mysql and use Django Admin to create a rule engine around it. It is very simplistic. Repos will be open sourced as well, soon.
+We at paytm save rules in Mysql and use Django Admin to create a rule engine around it. It is very simplistic..
 
 
 ### Usage
@@ -141,9 +138,11 @@ Applying Rules
     msg : the object which needs to be changed . This object is passed by reference and if user wishes to keep the original object sane then he / she needs to clone the object before passing here ( using lodash/underscore or similar )
 
     ruletag : single tag. TODO : support for multiple tags
+
+    generateMeta : (boolean) If you want to generate meta information of rul execution ( will be 50% slower to execute a rule ). Default false
 */
 
-meta_object = ruleEngineObject.applyRules(msg, ruletag);
+meta_object = ruleEngineObject.applyRules(msg, ruletag, generateMeta);
 
 ```
 
@@ -250,15 +249,14 @@ Rules, conditions and actions are dictionary based to have easy accessibility
 
 ### Benchmarks : uses benchmark.js
 ```
-npm run benchmark
+$ npm run benchmark
+
+Start Benchmark Set 1 : with 1 Rule : natural number
+ruleengine x 123,730 ops/sec ±2.79% (82 runs sampled)
+native x 39,966,923 ops/sec ±2.55% (83 runs sampled)
+Fastest is native
 ```
 
-**5 random benchmarks**
- - ruleengine x 2,826 ops/sec ±9.63% (57 runs sampled)
- - ruleengine x 2,769 ops/sec ±9.54% (62 runs sampled)
- - ruleengine x 2,649 ops/sec ±13.87% (43 runs sampled)
- - ruleengine x 2,964 ops/sec ±4.58% (61 runs sampled)
- - ruleengine x 2,640 ops/sec ±9.00% (62 runs sampled)
 
 
 ### Theory 
@@ -269,8 +267,8 @@ npm run benchmark
 
 
 ### Todo / improvements / known Bugs
-- Write test cases to use Meta object as well as Rule engine output.
 - Support for Custom Blocking/non-blocking sync/async functions is still debatable and is not added as of now
 - Rule Snapshots ? Rule Audits ?
 - How to define a common Rules language ? Currently Rules are picked from DB. Is that standard way , or should we define an API for this ?
 - Give a GUI to manage Rules/ get status/ get active Rules, etc...
+- Performance bnechmark

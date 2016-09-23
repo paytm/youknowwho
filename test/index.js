@@ -43,7 +43,7 @@ describe("Rule Engine Test Suite for empty rules" , function () {
         var message = {
             "integer" : 1
         };
-        var meta = re.applyRules(message);
+        var meta = re.applyRules(message, null, true);
 
         // check basics in meta object
         check_basic_meta(meta);
@@ -64,7 +64,7 @@ describe("Rule Engine Test Suite for empty rules" , function () {
         var message = {
             "integer" : 1
         };
-        var meta = re.applyRules(message);
+        var meta = re.applyRules(message, null, true);
 
         // check basics in meta object
         check_basic_meta(meta);
@@ -339,8 +339,8 @@ describe("Basic Operator Test Suite with rules", function () {
             it(eachTest.testCaseName, function(done) {
 
                 var meta = null;
-                if(eachTest.tag_to_exec) meta = re.applyRules(eachTest.message, eachTest.tag_to_exec);
-                else meta = re.applyRules(eachTest.message);
+                if(eachTest.tag_to_exec) meta = re.applyRules(eachTest.message, eachTest.tag_to_exec, true);
+                else meta = re.applyRules(eachTest.message, null, true);
 
                 // Output check ...
                 // console.log("meta.rules", JSON.stringify(meta.rules, null, 4));

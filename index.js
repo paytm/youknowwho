@@ -15,6 +15,7 @@ var
     _                   = require('lodash'),
     MOMENT              = require('moment'),
     RANGE               = require('./lib/tinyRange'),
+    LO                  = require('./lib/lodashOverride'),
     VALIDATOR           = require('validator'),
 
     /* NPM Paytm */
@@ -295,16 +296,21 @@ YKW.prototype.__checkIsSet = function (cVal, msgVal) {
     return (_.intersection(cVal, msgVal).length > 0) ? true : false;
 };
 
-YKW.prototype.applyRules = function(msg, tag) {
+YKW.prototype.applyRules = function(msg, tag, generateMeta) {
     var
         self                = this,
-        startTime           = MOMENT(),
+        startTime           = null,
+        msgMeta             = null,
         endTime             = null,
-        msgMeta                = _.cloneDeep(self.masterMeta),
         listofActiveRules   = null;
 
     // Meta , catching the start time
-    msgMeta.startTime = startTime.format('x');
+    if(generateMeta) {
+        startTime = MOMENT(),
+        msgMeta = _.cloneDeep(self.masterMeta),
+        msgMeta.startTime = startTime.format('x');
+        msgMeta.rules = {};
+    }
 
     // Load only rules from that tag or all rules
     if(tag)     listofActiveRules = self.tagsRuleMap[tag];
@@ -312,9 +318,6 @@ YKW.prototype.applyRules = function(msg, tag) {
 
     // In case no rules are found
     if(!UTIL.isArray(listofActiveRules)) listofActiveRules = [];
-
-    // empty rules in meta
-    msgMeta.rules = {};
 
     // Each Rule
     for(var iRule = 0; iRule < listofActiveRules.length; iRule ++) {
@@ -336,7 +339,9 @@ YKW.prototype.applyRules = function(msg, tag) {
             conditionSets         = {};
 
         // Add in Meta
-        msgMeta.rules[eachRule.id] = ruleMeta;
+        if(generateMeta) {
+            msgMeta.rules[eachRule.id] = ruleMeta;
+        }
 
         /*
             Conditions in RUle
@@ -351,7 +356,9 @@ YKW.prototype.applyRules = function(msg, tag) {
                 condMeta        = {"cid" : eachCondition.id },
 
                 // Get Key from message
-                msgValue        = _.get(msg, eachCondition.key, null),
+                // msgValue        = _.get(msg, eachCondition.key, null),
+                // use improved GET
+                msgValue        = LO.cpGet(msg, eachCondition.castedPath, null),
 
                 // Get condition value
                 condValue       = eachCondition.value,
@@ -391,7 +398,7 @@ YKW.prototype.applyRules = function(msg, tag) {
             condMeta.d = cDecision;
 
             // Save condition decisions for handling compelx templates in conditions
-            _.set(conditionSets,iCondition,cDecision);
+            conditionSets[iCondition] = cDecision;
 
             /* Check if 1st condition */
             if(iCondition === 0)    finalDecision = cDecision;
@@ -460,7 +467,8 @@ YKW.prototype.applyRules = function(msg, tag) {
             hence we are putting it outside of actions loop
         */
         /* Exit Rule engine and do not execute any more rules */
-        if( _.get(msg, R_ACTIONS.RE_EXIT, false) === true) {
+        // if( _.get(msg, R_ACTIONS.RE_EXIT, false) === true) {
+        if(msg[R_ACTIONS.RE_EXIT] === true) {
 
             // delete this unwated key. Might uncomment this in future if we wish to trace where this rule ended
             delete msg[R_ACTIONS.RE_EXIT];
@@ -469,10 +477,13 @@ YKW.prototype.applyRules = function(msg, tag) {
         }
     } // Each rule
 
-    // Meta , catching the end time
-    endTime = MOMENT();
-    msgMeta.endTime = endTime.format('x');
-    msgMeta.execTime = endTime.diff(startTime);
+    
+
+    if(generateMeta) {
+        endTime = MOMENT();
+        msgMeta.endTime = endTime.format('x');
+        msgMeta.execTime = endTime.diff(startTime);
+    }
 
     // returning Meta instead of Msg ( which is written by reference)
     return msgMeta;
@@ -770,6 +781,7 @@ YKW.prototype.loadRules = function(receivedRulesArray) {
         for(var icond = 0; icond < _.get(eachRule, 'conditions', []).length; icond ++) {
             eachRule.conditions[icond] = self._parseRuleCondition(eachRule.conditions[icond]);
 
+            /* This is to indentify the unique condition keys which are being used */
             // Lets take out the key on which condition is applied
             var cKey = eachRule.conditions[icond].key;
             if (uCKeys.indexOf(cKey) === -1) uCKeys.push(cKey);
@@ -778,18 +790,24 @@ YKW.prototype.loadRules = function(receivedRulesArray) {
             if(Array.isArray(eachRule.conditions[icond].valueKeys))
                 uCKeys = _.union(uCKeys, eachRule.conditions[icond].valueKeys);
 
+
             /* lets bind the function which will be used */
             var opEnum = R_COND_OPS_REV_MAP[eachRule.conditions[icond].operation];
 
             if(self.__condOps.hasOwnProperty(opEnum) === true) {
                 eachRule.conditions[icond].funcBind = self.__condOps[opEnum];
             } else eachRule.conditions[icond].funcBind = self.__condOps.EMPTY;
+
+
+            /* Lets pre cast the Key which is being used to access for check_variable */
+            eachRule.conditions[icond].castedPath = LO.castPath(cKey);
         }
 
         // action parsing
         for(var iact = 0; iact < _.get(eachRule, 'actions', []).length; iact ++) {
             eachRule.actions[iact] = self._parseRuleAction(eachRule.actions[iact]);
 
+            /* This is to identify the unique action keys which are being used */
             // Lets take out the key on which action is applied
             var aKey = eachRule.actions[iact].key;
             if (uAKeys.indexOf(aKey) === -1) uAKeys.push(aKey);
@@ -798,6 +816,7 @@ YKW.prototype.loadRules = function(receivedRulesArray) {
             if(Array.isArray(eachRule.actions[iact].valueKeys))
                 uAKeys = _.union(uAKeys, eachRule.actions[iact].valueKeys);
 
+            /* Lets bind the function which will be called */
             var actEnum = R_ACTIONS_REV_MAP[eachRule.actions[iact].action];
 
             if(self.__actionOps.hasOwnProperty(actEnum) === true) {
