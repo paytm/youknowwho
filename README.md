@@ -209,7 +209,7 @@ ruleEngineObject.getLoadedMeta()
 ```
 
 ### Meta Object
-Meta object saves the state of each rule , condition and action with variups required timestamps. It is not in the scope of this project to analyze the performace/metrics of the engine/rules.
+Meta object saves the state of each rule , condition and action with various  required timestamps. It is not in the scope of this project to analyze the performance/metrics of the engine/rules.
 This can help in re-arranging conditions, removing redundant /slow rules, etc. . Idea should be to minimize the number of conditions/rules for each message.
 Schema of meta object
 
@@ -263,7 +263,7 @@ Fastest is native
 - Why will we never support 'calling rules' with multiple tag options ? : Then conditional operators among tags will be a major requirement and tags are essentially rule groups.
 
 - Changing Rule Engine execution from sync to async :
-    + While sync offered a lot more performance benefit , ease of usage and code simplicity , it lacked a majority extensibility , i.e. executing cutom functions in code flows. Conditions, while sync, are forcefully made async to keep the options open, and to keep performance realistic.
+    + While sync offered a lot more performance benefit , ease of usage and code simplicity , it lacked a majority extensibility , i.e. executing custom  functions in code flows. Conditions, while sync, are forcefully made async to keep the options open, and to keep performance realistic.
 
 
 ### Todo / improvements / known Bugs
@@ -271,4 +271,4 @@ Fastest is native
 - Rule Snapshots ? Rule Audits ?
 - How to define a common Rules language ? Currently Rules are picked from DB. Is that standard way , or should we define an API for this ?
 - Give a GUI to manage Rules/ get status/ get active Rules, etc...
-- Performance bnechmark
+- Performance benchmark
