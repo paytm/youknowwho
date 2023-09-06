@@ -209,11 +209,11 @@ ruleEngineObject.getLoadedMeta()
 ```
 
 ### Meta Object
-Meta object saves the state of each rule , condition and action with variups required timestamps. It is not in the scope of this project to analyze the performace/metrics of the engine/rules.
+Meta object saves the state of each rule , condition and action with various required timestamps. It is not within the scope of this project to analyze the performace/metrics of the engine/rules.
 This can help in re-arranging conditions, removing redundant /slow rules, etc. . Idea should be to minimize the number of conditions/rules for each message.
 Schema of meta object
 
-Rules, conditions and actions are dictionary based to have easy accessibility
+Rules, conditions and actions are dictionary based to have easy are easily accessible.
 
 ```
     {
